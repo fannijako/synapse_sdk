@@ -1,5 +1,4 @@
-# synapse_sdk
-Synapse SDK
+# Synapse SDK
 
 ## How to use the library?
 
