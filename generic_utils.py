@@ -198,7 +198,7 @@ class DataProduct(Notebook):
 
     def vacuum_all(self, layer: str = 'curated'):
         """
-        If layer is None, optimize curated and trusted, else the specified layer
+        If layer is None, vacuum curated and trusted, else the specified layer
         """
         raise NotImplementedError
 
@@ -217,14 +217,16 @@ class Table(DataProduct):
 
     def _find_sensitivity_source_database(self) -> Tuple[str, str, str]:
         table = self.curated_tables.get(self.name)
+        if not table:
+            raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
         return table.get('sensitivity'), table.get('source'), table.get('database')
 
     def vacuum(self, hours: int = 168, force: bool = False) -> None:
 
         if hours < 168 and not force:
-            raise ValueError('It is not recommended to VACUUM a delta table with retention lower than 7 days')
+            raise ValueError('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
 
-        if hours < 168 and not force:
+        if hours < 168 and force:
             spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
 
         self.DeltaTable.vacuum(retentionHours = hours)
