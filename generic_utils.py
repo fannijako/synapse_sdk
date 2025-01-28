@@ -12,9 +12,9 @@ from pyspark.sql import DataFrame, SparkSession # type: ignore
 class Utils():
     def __init__(self, local: bool = False) -> None:
         self.local = local
-        self.spark = self.spark()
+        self.spark = self.create_spark()
 
-    def spark(self):
+    def create_spark(self):
         if not self.local:
             return spark # type: ignore
         return SparkSession.builder.master("local").appName("dataproduct").getOrCreate()
