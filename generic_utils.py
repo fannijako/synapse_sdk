@@ -442,12 +442,21 @@ class Table(DataProduct):
 
 
 class DataFrame(Table):
-    def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None) -> None:
+    def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None) -> None:
         super().__init__(name = name, load_type = load_type, layer = layer)
-        if not version:
+        self.version = version
+        self.timestamp = timestamp
+        self.load_dataframe()
+
+    def load_dataframe(self) -> None:
+        if self.version and self.timestamp:
+            raise ValueError("Can't set both version and timestamp")
+        if not self.version and not self.timestamp:
             self.dataframe = spark.read.format('delta').load(self.path) # type: ignore
-        else:
-            self.dataframe = spark.read.format('delta').option('versionAsOf', version).load(self.path) # type: ignore
+        elif self.version:
+            self.dataframe = spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore
+        elif self.timestamp:
+            self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore
 
     def write_to_database(self,
                           database_name: str,
