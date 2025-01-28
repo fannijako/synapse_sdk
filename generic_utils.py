@@ -190,11 +190,25 @@ class DataProduct(Notebook):
     def list_tables_in_trusted(self):
         raise NotImplementedError
 
-    def optimize_all(self, layer: str = 'curated'):
+    def optimize_all(self, layer: str = 'curated', partition_filter: str = None):
         """
         If layer is None, optimize curated and trusted, else the specified layer
+
+        Example usage:
+            DataProduct().optimize_all()
+            Which runs a OPTIMIZE command on all delta tables in the curated layer without a partition filter.
         """
-        raise NotImplementedError
+
+        def execute_layer(table_names: list, layer: str):
+            for table_name in table_names:
+                table = Table(table_name, layer = layer)
+                table.optimize(partition_filter = partition_filter)
+
+        if layer == 'curated' or layer is None:
+            execute_layer(self.curated_tables.keys(), 'curated')
+
+        if layer == 'trusted' or layer is None:
+            execute_layer(self.trusted_tables.keys(), 'trusted')
 
     def vacuum_all(self, layer: str = 'curated', hours: int = 168, force: bool = False):
         """
