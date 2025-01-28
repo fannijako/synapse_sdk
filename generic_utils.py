@@ -151,7 +151,7 @@ class DataProduct(Notebook):
     def __init__(self) -> None:
         super().__init__()
         self.curated_tables = self.list_tables_in_curated()
-        self.trusted_tables = None
+        self.trusted_tables = {}
     
     def list_tables_in_curated(self) -> dict:
         """
@@ -196,11 +196,26 @@ class DataProduct(Notebook):
         """
         raise NotImplementedError
 
-    def vacuum_all(self, layer: str = 'curated'):
+    def vacuum_all(self, layer: str = 'curated', hours: int = 168, force: bool = False):
         """
         If layer is None, vacuum curated and trusted, else the specified layer
+
+        Example usage:
+            DataProduct().vacuum_all()
+            Which runs a VACUUM command with 7 days retention on all delta tables in the curated layer.
         """
-        raise NotImplementedError
+
+        spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore
+        def execute_layer(table_names: list, layer: str):
+            for table_name in table_names:
+                table = Table(table_name, layer = layer)
+                table.vacuum(hours = hours, force = force)
+
+        if layer == 'curated' or layer is None:
+            execute_layer(self.curated_tables.keys(), 'curated')
+
+        if layer == 'trusted' or layer is None:
+            execute_layer(self.trusted_tables.keys(), 'trusted')
 
 
 class Table(DataProduct):
