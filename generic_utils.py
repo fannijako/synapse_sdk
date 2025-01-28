@@ -104,10 +104,10 @@ class Notebook(Utils):
         self.exit_values = {}
 
     def set_spark_datetime_settings(self) -> None:
-        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore
+        self.spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore
+        self.spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED") # type: ignore
+        self.spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore
+        self.spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore
 
     def set_exit_value(self, key: str, value: Union[str, list]) -> None:
         """
@@ -219,7 +219,7 @@ class DataProduct(Notebook):
             Which runs a VACUUM command with 7 days retention on all delta tables in the curated layer.
         """
 
-        spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore
+        self.spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore
         def execute_layer(table_names: list, layer: str):
             for table_name in table_names:
                 table = Table(table_name, layer = layer)
@@ -256,7 +256,7 @@ class Table(DataProduct):
             raise ValueError('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
 
         if hours < 168 and force:
-            spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
+            self.spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
 
         self.DeltaTable.vacuum(retentionHours = hours)
 
@@ -354,10 +354,10 @@ class Table(DataProduct):
 
         # Set the table properties, so that the upcoming writes are using the same target file sizes
         # Effects optimize, zorder, autoopzimite and autocompact
-        spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.targetFileSize'='{target_file_size}')") # type: ignore
+        self.spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.targetFileSize'='{target_file_size}')") # type: ignore
 
         # Enable autooptimize, so that the later executions will write new files with target_file_size
-        spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
+        self.spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
 
         if print:
             details = self.DeltaTable.detail()
@@ -445,7 +445,7 @@ class Table(DataProduct):
             # Calculate the number of columns to collect statistics about and if enabled, enforce it through a table property
             nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
             if alter_statistics_number:
-                spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore
+                self.spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore
 
             # Calculate the number of columns
             nbr_columns = len(self.dataframe.schema)
@@ -483,11 +483,11 @@ class DataFrame(Table):
         if self.version and self.timestamp:
             raise ValueError("Can't set both version and timestamp")
         if not self.version and not self.timestamp:
-            self.dataframe = spark.read.format('delta').load(self.path) # type: ignore
+            self.dataframe = self.spark.read.format('delta').load(self.path) # type: ignore
         elif self.version:
-            self.dataframe = spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore
+            self.dataframe = self.spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore
         elif self.timestamp:
-            self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore
+            self.dataframe = self.spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore
 
     def write_to_database(self,
                           database_name: str,
