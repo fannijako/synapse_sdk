@@ -442,9 +442,12 @@ class Table(DataProduct):
 
 
 class DataFrame(Table):
-    def __init__(self, name: str, load_type: str = None, layer: str = 'curated') -> None:
+    def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None) -> None:
         super().__init__(name = name, load_type = load_type, layer = layer)
-        self.dataframe = spark.read.format('delta').load(self.path) # type: ignore
+        if not version:
+            self.dataframe = spark.read.format('delta').load(self.path) # type: ignore
+        else:
+            self.dataframe = spark.read.format('delta').option('versionAsOf', version).load(self.path) # type: ignore
 
     def write_to_database(self,
                           database_name: str,
