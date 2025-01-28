@@ -477,6 +477,7 @@ class DataFrame(Table):
         self.version = version
         self.timestamp = timestamp
         self.load_dataframe()
+        self.version = self.get_version()
 
     def load_dataframe(self) -> None:
         if self.version and self.timestamp:
@@ -487,6 +488,12 @@ class DataFrame(Table):
             self.dataframe = spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore
         elif self.timestamp:
             self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore
+
+    def get_version(self) -> int:
+        return self.version if self.version else int(self.history(1).select('version').collect()[0][0])
+
+    def load_version_minus_n(self, timetravel: int = 1) -> DataFrame:
+        return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
 
     def write_to_database(self,
                           database_name: str,
