@@ -495,6 +495,16 @@ class DataFrame(Table):
     def load_version_minus_n(self, timetravel: int = 1) -> DataFrame:
         return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
 
+    def is_changed_since_last_version(self, columns_to_ignore: list = None) -> bool:
+        not_existing_columns = [col for col in columns_to_ignore if col not in self.dataframe.columns]
+        if len(not_existing_columns) != 0:
+            raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe, with columns {self.dataframe.columns}')
+
+        version_minus_one = self.load_version_minus_n(timetravel = 1)
+        unioned_df = self.dataframe.drop(*columns_to_ignore).unionByName(version_minus_one.dataframe.drop(*columns_to_ignore))
+
+        return unioned_df.distinct().count() != version_minus_one.dataframe.distinct().count()
+
     def write_to_database(self,
                           database_name: str,
                           database_schema: str,
