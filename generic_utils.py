@@ -502,8 +502,8 @@ class DataFrame(Table):
 
         version_minus_one = self.load_version_minus_n(timetravel = 1)
 
-        current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct.count()
-        new_version_count_distinct = version_minus_one.dataframe.drop(*columns_to_ignore).distinct.count()
+        current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct().count()
+        new_version_count_distinct = version_minus_one.dataframe.drop(*columns_to_ignore).distinct().count()
 
         if current_version_count_distinct != new_version_count_distinct:
             return True
