@@ -501,9 +501,17 @@ class DataFrame(Table):
             raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe, with columns {self.dataframe.columns}')
 
         version_minus_one = self.load_version_minus_n(timetravel = 1)
-        unioned_df = self.dataframe.drop(*columns_to_ignore).unionByName(version_minus_one.dataframe.drop(*columns_to_ignore))
 
-        return unioned_df.distinct().count() != version_minus_one.dataframe.distinct().count()
+        current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct.count()
+        new_version_count_distinct = version_minus_one.dataframe.drop(*columns_to_ignore).distinct.count()
+
+        if current_version_count_distinct != new_version_count_distinct:
+            return True
+
+        unioned_df = self.dataframe.drop(*columns_to_ignore).unionByName(version_minus_one.dataframe.drop(*columns_to_ignore))
+        unioned_count_distinct = unioned_df.distinct().count()
+
+        return unioned_count_distinct != new_version_count_distinct
 
     def write_to_database(self,
                           database_name: str,
