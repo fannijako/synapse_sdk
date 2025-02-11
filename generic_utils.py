@@ -517,6 +517,26 @@ class DataFrame(Table):
 
         return same_super and same_version and same_timestamp
 
+    def __lt__(self, other_dataframe: DataFrame) -> bool:
+        if not self.super() == other_dataframe.super():
+            raise ValueError('< operator only supported between different versions of the same table')
+        return  self.version < other_dataframe.version
+
+    def __le__(self, other_dataframe: DataFrame) -> bool:
+        if not self.super() == other_dataframe.super():
+            raise ValueError('<= operator only supported between different versions of the same table')
+        return  self.version <= other_dataframe.version
+
+    def __gt__(self, other_dataframe: DataFrame) -> bool:
+        if not self.super() == other_dataframe.super():
+            raise ValueError('> operator only supported between different versions of the same table')
+        return  self.version > other_dataframe.version
+
+    def __ge__(self, other_dataframe: DataFrame) -> bool:
+        if not self.super() == other_dataframe.super():
+            raise ValueError('>= operator only supported between different versions of the same table')
+        return  self.version >= other_dataframe.version
+
     def __str__(self) -> str:
         return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer as a dataframe for version {self.version}"
 
