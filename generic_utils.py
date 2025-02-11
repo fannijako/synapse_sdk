@@ -9,7 +9,20 @@ from delta.tables import DeltaTable # type: ignore
 from pyspark.sql import DataFrame, SparkSession # type: ignore
 
 
-class Utils():
+class Utils(object):
+    _instance = None
+
+    def __new__(cls):
+         if not cls._instance:
+             cls._instance = super().__new__(cls)
+         return cls._instance
+
+    def __str__(cls) -> str:
+        return f'Utils class with methods: {cls.__dict__}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
     def deep_ls(self, path: str, max_depth: int = 1) -> Iterator[str]:
         """
         List all files and folders in specified path and
@@ -73,21 +86,41 @@ class Utils():
 
 
 class Notebook(Utils):
+    exit_values = {}
+
     def __init__(self) -> None:
         self.workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
+
         _, self.data_product_name, self.environment, self.data_product_version = self.workspace_name.split('-')
         self.azure_storage_name = f"dls{self.data_product_name}{self.environment}{self.data_product_version}"
         self.curated_path = f"abfss://curated@{self.azure_storage_name}.dfs.core.windows.net"
         self.standardized_curated_path = f"{self.curated_path}/standardized"
         self.sensitive_standardized_curated_path = f"{self.curated_path}/sensitive-standardized"
+
+        self.notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
         self.job_id = mssparkutils.env.getJobId() # type: ignore
+        self.pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
         self.pool = mssparkutils.env.getPoolName() # type: ignore
         self.cluster = mssparkutils.env.getClusterId() # type: ignore
-        self.notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
-        self.pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
 
         self.set_spark_datetime_settings()
-        self.exit_values = {}
+    
+    def __eq__(self, other_notebook: Notebook) -> bool:
+
+        same_workspace_name = self.workspace_name == other_notebook.workspace_name
+        same_job_id = self.job_id == other_notebook.job_id
+        same_notebook_name = self.notebook_name and other_notebook.notebook_name
+        same_pipeline_job_id = self.pipeline_job_id and other_notebook.pipeline_job_id
+        same_pool = self.pool and other_notebook.pool
+        same_cluster = self.cluster and other_notebook.cluster
+
+        return same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
+
+    def __str__(self) -> str:
+        return f'{self.notebook_name} in {self.workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
 
     def set_spark_datetime_settings(self) -> None:
         spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore
@@ -138,6 +171,15 @@ class DataProduct(Notebook):
         super().__init__()
         self.curated_tables = self.list_tables_in_curated()
         self.trusted_tables = {}
+
+    def __eq__(self, other_data_product: DataProduct) -> bool:
+        return self.azure_storage_name == other_data_product.azure_storage_name
+
+    def __str__(self) -> str:
+        return f'{self.data_product_name} data product version {self.data_product_version}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
     
     def list_tables_in_curated(self) -> dict:
         """
@@ -219,8 +261,12 @@ class DataProduct(Notebook):
 
 
 class Table(DataProduct):
+    nbr_tables = 0
+
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated') -> None:
         super().__init__()
+        Table.nbr_tables += 1
+
         self.name = name
         self.layer = layer
         self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
@@ -229,6 +275,15 @@ class Table(DataProduct):
         self.load_type = load_type if load_type else self._get_load_type()
         self.table_size = None
         self.target_file_size = None
+    
+    def __eq__(self, other_table: Table) -> bool:
+        return self.super() == other_table.super() and self.name == other_table.name and self.layer == other_table.layer
+
+    def __str__(self) -> str:
+        return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, layer={self.layer})"
 
     def _find_sensitivity_source_database(self) -> Tuple[str, str, str]:
         table = self.curated_tables.get(self.name)
@@ -453,6 +508,20 @@ class DataFrame(Table):
         self.timestamp = timestamp
         self.load_dataframe()
         self.version = self.get_version()
+    
+    def __eq__(self, other_dataframe: DataFrame) -> bool:
+
+        same_super = self.super() == other_dataframe.super()
+        same_version = self.version == other_dataframe.version
+        same_timestamp = self.timestamp == other_dataframe.timestamp
+
+        return same_super and same_version and same_timestamp
+
+    def __str__(self) -> str:
+        return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer as a dataframe for version {self.version}"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, layer={self.layer}, version={self.version}, timestamp={self.timestamp})"
 
     def load_dataframe(self) -> None:
         if self.version and self.timestamp:
@@ -651,6 +720,15 @@ class KeyVault(Notebook):
         super().__init__()
         self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
     
+    def __eq__(self, other_keyvault: KeyVault) -> bool:
+        return self.key_vault_name == other_keyvault.key_vault_name
+
+    def __str__(self) -> str:
+        return f'Key Vault linked service {self.key_vault_name}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+    
     def get_secret(self, secret_name: str) -> str:
         raise NotImplementedError
 
@@ -662,6 +740,21 @@ class aSQLDatabase(Notebook):
         self.database_name = database_name
         self.database_schema = database_schema
         self.asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
+    
+    def __eq__(self, other_database: aSQLDatabase) -> bool:
+
+        same_database_server = self.database_server == other_database.database_server
+        same_database_name = self.database_name == other_database.database_name
+        same_database_schema = self.database_schema == other_database.database_schema
+        same_asql_database_linked_service_name = self.asql_database_linked_service_name == other_database.asql_database_linked_service_name
+
+        return same_database_server and same_database_name and same_database_schema and same_asql_database_linked_service_name
+
+    def __str__(self) -> str:
+        return f'Azure SQL database linked service to the {self.database_schema} in {self.database_name} database'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(database_name='{self.database_name}', database_schema={self.database_schema})"
     
     def get_token(self) -> str:
         return TokenLibrary.getConnectionString(self.asql_database_linked_service_name) # type: ignore
