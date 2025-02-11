@@ -175,6 +175,9 @@ class DataProduct(Notebook):
     def __eq__(self, other_data_product: DataProduct) -> bool:
         return self.azure_storage_name == other_data_product.azure_storage_name
 
+    def __contains__(self, table: str) -> bool:
+            return table in self.curated_tables.keys() or table in self.trusted_tables.keys()
+
     def __str__(self) -> str:
         return f'{self.data_product_name} data product version {self.data_product_version}'
 
@@ -536,6 +539,12 @@ class DataFrame(Table):
         if not self.super() == other_dataframe.super():
             raise ValueError('>= operator only supported between different versions of the same table')
         return  self.version >= other_dataframe.version
+
+    def __add__(self, version_increase: int) -> DataFrame:
+        return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version + version_increase)
+    
+    def __sub__(self, version_decrease: int) -> DataFrame:
+        return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - version_decrease)
 
     def __str__(self) -> str:
         return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer as a dataframe for version {self.version}"
