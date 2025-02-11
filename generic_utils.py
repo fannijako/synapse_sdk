@@ -10,25 +10,17 @@ from pyspark.sql import DataFrame, SparkSession # type: ignore
 
 
 class Utils():
-    def __init__(self, local: bool = False) -> None:
-        self.local = local
-
-    def create_spark(self):
-        if not self.local:
-            return spark # type: ignore
-        return SparkSession.builder.master("local").appName("dataproduct").getOrCreate()
-
     def deep_ls(self, path: str, max_depth: int = 1) -> Iterator[str]:
         """
         List all files and folders in specified path and
         subfolders within maximum recursion depth.
 
         Args:
-        path (str): path of the listing.
-        max_depth (str, optional): depth of the listing. Defaults to 1.
+            path (str): path of the listing.
+            max_depth (str, optional): depth of the listing. Defaults to 1.
 
         Returns:
-        Generator: returns all files until max_depth has been reached.
+            Iterator[str]: returns all files until max_depth has been reached.
         """
 
         folder = mssparkutils.fs.ls(path) # type: ignore
@@ -54,26 +46,21 @@ class Utils():
         Calculate and return the date a specified number of days back from the current date.
 
         Args:
-        days_back (int): The number of days to go back from the current date.
+            days_back (int): The number of days to go back from the current date.
 
         Returns:
-        str: The date in 'YYYY-MM-DD' format representing the date calculated days_back from today.
+            str: The date in 'YYYY-MM-DD' format representing the date calculated days_back from today.
         """
         date_back = datetime.now() - timedelta(days=days_back)
-        date_back_formatted = date_back.strftime('%Y-%m-%d')
+        return date_back.strftime('%Y-%m-%d')
 
-        return date_back_formatted
-    
     def write_non_distributed_json(content: dict, target_path: str) -> None:
         """
         Writes a json file to abfss as per one file and not as a distributed json object.
 
         Args:
-        content (dict): content of the file to be written.
-        target_path (str): abfss:// path to write to.
-
-        Returns:
-        None
+            content (dict): content of the file to be written.
+            target_path (str): abfss:// path to write to.
         """
 
         file_name = target_path.split("/")[-1]
@@ -186,7 +173,7 @@ class DataProduct(Notebook):
         
         return curated_dict
     
-    def list_tables_in_trusted(self):
+    def list_tables_in_trusted(self) -> dict:
         raise NotImplementedError
 
     def optimize_all(self, layer: str = 'curated', partition_filter: str = None):
@@ -300,7 +287,7 @@ class Table(DataProduct):
         Get the delta lake table size in bytes, using the DESCRIBE DETAIL command
 
         Returns:
-        int: target table size in bytes
+            int: target table size in bytes
         """
 
         detail_df = self.DeltaTable.detail()
@@ -318,7 +305,7 @@ class Table(DataProduct):
         Returns value in a format that can be used with the spark configuration settings
 
         Returns:
-        str: target table size in MB
+            str: target table size in MB
         """
 
         target_table_size = self.table_size if self.table_size else self.get_target_table_size()
@@ -343,12 +330,8 @@ class Table(DataProduct):
         Enforce the target file size for this optimize  and for later writes
         with table property setting delta.targetFileSize
         Enable autoOptimize and autoCompact for setting the data layout for upcoming writes
-
-        Returns:
-        None
         """
 
-        target_table_size = self.table_size if self.table_size else self.get_target_table_size()
         target_file_size = self.target_file_size if self.target_file_size else self.calculate_target_file_size()
 
         # Set the table properties, so that the upcoming writes are using the same target file sizes
@@ -377,20 +360,18 @@ class Table(DataProduct):
             - more than 1 distinct values
 
         Args:
-        primary_keys (list[str]): list of primary keys of the table.
+            primary_keys (list[str]): list of primary keys of the table.
 
         Returns:
-        list[str]: list of column names to use in Z-ORDERING.
-        list[str]: list of column names to calculate statistics about other than the Z-ORDERING columns.
+            list[str]: list of column names to use in Z-ORDERING.
+            list[str]: list of column names to calculate statistics about other than the Z-ORDERING columns.
         """
 
         nbr_rows = self.dataframe.count()
 
-        # Collections to store the columns chosen for z-ordering and analysing
         zorder_columns = {}
         analyse_columns = []
 
-        # We are only considering primary keys for these options
         for column in primary_keys:
             # Calculate the distinct values in the current column and calculate its ratio over the number of rows
             nbr_distinct = self.dataframe.agg(F.approx_count_distinct(column).alias('count')).collect()[0][0]
@@ -406,10 +387,8 @@ class Table(DataProduct):
 
         # Sort the possible z-ordering columns based on the ratio
         zorder_columns_sorted = sorted(zorder_columns, key = lambda col: zorder_columns.get(col))
-        # Get the first 4 for z-ordering
         zorder_columns = zorder_columns_sorted[0:4]
 
-        # Add the others to the analyse columns
         if len(zorder_columns_sorted) > 4:
             analyse_columns.extend(zorder_columns_sorted[4:])
 
@@ -438,21 +417,17 @@ class Table(DataProduct):
         """
 
         try:
-            # Calculate which primary keys will be used in z-ordering and to collect statistics about
             zorder_columns, analyse_columns = self.calculate_zorder_and_analyse_columns(primary_keys)
 
-            # Calculate the number of columns to collect statistics about and if enabled, enforce it through a table property
             nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
             if alter_statistics_number:
                 spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore
 
-            # Calculate the number of columns
             nbr_columns = len(self.dataframe.schema)
 
             return ','.join(zorder_columns), ','.join(analyse_columns), nbr_column_statistics, nbr_columns
 
         except Exception:
-            # Return default values in case of failure
             return '', '', 32, 9999
 
     def set_table_properties(self):
@@ -549,12 +524,12 @@ class DataFrame(Table):
         Adds a timestamp column to a PySpark DataFrame with an optional timezone and custom format.
 
         Args:
-        timestamp_column_name (str, optional): the name for the new timestamp column. Defaults to 'load_timestamp'
-        timezone (str, optional): the timezone to which the timestamp will be converted. Defaults to None.
-        timestamp_format (str, optional): the format for the timestamp column. Defaults to 'yyyy-MM-dd HH:mm:ss'.
+            timestamp_column_name (str, optional): the name for the new timestamp column. Defaults to 'load_timestamp'
+            timezone (str, optional): the timezone to which the timestamp will be converted. Defaults to None.
+            timestamp_format (str, optional): the format for the timestamp column. Defaults to 'yyyy-MM-dd HH:mm:ss'.
 
         Raises:
-        ValueError: if the provided column name already exists in the DataFrame to prevent value loss.
+            ValueError: if the provided column name already exists in the DataFrame to prevent value loss.
         """
 
         if timestamp_column_name in self.dataframe.columns:
@@ -586,10 +561,10 @@ class DataFrame(Table):
         new column is constructed using the given prefix followed by '_hash'.
 
         Parameters:
-        prefix (str, optional): The prefix for the hash column name. Defaults to 'dap'.
+            prefix (str, optional): The prefix for the hash column name. Defaults to 'dap'.
 
         Raises:
-        ValueError: if the provided column name already exists in the DataFrame to prevent value loss.
+            ValueError: if the provided column name already exists in the DataFrame to prevent value loss.
         """
 
         if f"{prefix}_hash" in self.dataframe.columns:
@@ -603,8 +578,8 @@ class DataFrame(Table):
         Rename the column names based on the given pattern. It removes the pattern by default.
 
         Args:
-        pattern_to_replace (str): The string pattern to replace.
-        replace_to (str, optional): The new string.
+            pattern_to_replace (str): The string pattern to replace.
+            replace_to (str, optional): The new string.
         """
 
         for colname in self.dataframe.columns:
@@ -615,11 +590,11 @@ class DataFrame(Table):
         Apply the renaming to each column in the dictionary.
         
         Args:
-        column_names (dict): The mapping dictionary. Example:
-            df_mapping = {
-                'current_col_name': 'new_col_name',
-                'current_col_name2': 'new_col_name2'
-            }
+            column_names (dict): The mapping dictionary. Example:
+                df_mapping = {
+                    'current_col_name': 'new_col_name',
+                    'current_col_name2': 'new_col_name2'
+                }
         """
 
         for column_old_name, column_new_name in column_names.items():
@@ -630,11 +605,11 @@ class DataFrame(Table):
         Apply the casting to each column in the dictionary.
         
         Args:
-        column_types (dict): The column types dictionary. Example:
-            df_cast = {
-                'col_name': IntegerType(),
-                'col_name2': StringType()
-            }
+            column_types (dict): The column types dictionary. Example:
+                df_cast = {
+                    'col_name': IntegerType(),
+                    'col_name2': StringType()
+                }
         """
 
         for column_name, column_type in column_types.items():
@@ -646,11 +621,11 @@ class DataFrame(Table):
         Constructs the merge condition from the given primary keys.
 
         Args:
-        pk (str): The primary keys separated 
-        separator (str, optional): The separator between the primary keys. The default value is ','.
+            pk (str): The primary keys separated 
+            separator (str, optional): The separator between the primary keys. The default value is ','.
         
         Returns:
-        str: The merge condition.
+            str: The merge condition.
         """
         pk_array = pk.split(separator)
         condition = " AND ".join([f"src.{pk.strip()} <=> dst.{pk.strip()}" for pk in pk_array])
@@ -662,12 +637,12 @@ class DataFrame(Table):
         Write the joined data to the target path in Excel format
 
         Args:
-        target_path (str): abfss:// path to write the result to
+            target_path (str): abfss:// path to write the result to
         """
     
         temp_path = f"/tmp/{target_path.split('/')[-1]}"
 
-        pdf = self.dataframe.pandas_api().to_excel(temp_path, index=False, engine='openpyxl')
+        self.dataframe.pandas_api().to_excel(temp_path, index=False, engine='openpyxl')
         mssparkutils.fs.cp('file:' + temp_path, target_path, recurse=False) # type: ignore
 
 
