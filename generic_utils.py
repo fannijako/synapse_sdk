@@ -105,7 +105,7 @@ class Notebook(Utils):
 
         self.set_spark_datetime_settings()
     
-    def __eq__(self, other_notebook: Notebook) -> bool:
+    def __eq__(self, other_notebook: Notebook) -> bool: # type: ignore
 
         same_workspace_name = self.workspace_name == other_notebook.workspace_name
         same_job_id = self.job_id == other_notebook.job_id
@@ -172,7 +172,7 @@ class DataProduct(Notebook):
         self.curated_tables = self.list_tables_in_curated()
         self.trusted_tables = {}
 
-    def __eq__(self, other_data_product: DataProduct) -> bool:
+    def __eq__(self, other_data_product: DataProduct) -> bool: # type: ignore
         return self.azure_storage_name == other_data_product.azure_storage_name
 
     def __contains__(self, table: str) -> bool:
@@ -279,7 +279,7 @@ class Table(DataProduct):
         self.table_size = None
         self.target_file_size = None
     
-    def __eq__(self, other_table: Table) -> bool:
+    def __eq__(self, other_table: Table) -> bool: # type: ignore
         return self.super() == other_table.super() and self.name == other_table.name and self.layer == other_table.layer
 
     def __str__(self) -> str:
@@ -749,7 +749,7 @@ class KeyVault(Notebook):
         super().__init__()
         self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
     
-    def __eq__(self, other_keyvault: KeyVault) -> bool:
+    def __eq__(self, other_keyvault: KeyVault) -> bool: # type: ignore
         return self.key_vault_name == other_keyvault.key_vault_name
 
     def __str__(self) -> str:
@@ -770,7 +770,7 @@ class aSQLDatabase(Notebook):
         self.database_schema = database_schema
         self.asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
     
-    def __eq__(self, other_database: aSQLDatabase) -> bool:
+    def __eq__(self, other_database: aSQLDatabase) -> bool:  # type: ignore
 
         same_database_server = self.database_server == other_database.database_server
         same_database_name = self.database_name == other_database.database_name
