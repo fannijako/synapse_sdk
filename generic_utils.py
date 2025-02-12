@@ -6,13 +6,13 @@ from datetime import datetime, timedelta
 from typing import Iterator, Tuple, Union
 
 from delta.tables import DeltaTable # type: ignore
-from pyspark.sql import DataFrame, SparkSession # type: ignore
+from pyspark.sql import DataFrame # type: ignore
 
 
 class Utils(object):
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls) -> Utils: # type: ignore
          if not cls._instance:
              cls._instance = super().__new__(cls)
          return cls._instance
@@ -89,25 +89,88 @@ class Notebook(Utils):
     exit_values = {}
 
     def __init__(self) -> None:
-        self.workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
+        self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
 
-        _, self.data_product_name, self.environment, self.data_product_version = self.workspace_name.split('-')
+        _, self.data_product_name, self.environment, self.data_product_version = self._workspace_name.split('-')
+        self._construct_paths()
+
+        self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        self._job_id = mssparkutils.env.getJobId() # type: ignore
+        self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+        self._pool = mssparkutils.env.getPoolName() # type: ignore
+        self._cluster = mssparkutils.env.getClusterId() # type: ignore
+
+        self.set_spark_datetime_settings()
+
+    @property
+    def workspace_name(self):
+        return self._workspace_name
+
+    @workspace_name.setter
+    def workspace_name(self, value):
+        if value != mssparkutils.env.getWorkspaceName(): # type: ignore
+            raise ValueError('Workspace name does not match the environment, the notebook is in.')
+        self._workspace_name = value
+
+    @property
+    def notebook_name(self):
+        return self._notebook_name
+
+    @notebook_name.setter
+    def notebook_name(self, value):
+        if value != mssparkutils.runtime.context.get('currentNotebookName'): # type: ignore
+            raise ValueError('Notebook name does not match the environment, the notebook is in.')
+        self._notebook_name = value
+
+    @property
+    def job_id(self):
+        return self._job_id
+
+    @job_id.setter
+    def job_id(self, value):
+        if value != mssparkutils.env.getJobId(): # type: ignore
+            raise ValueError('Job ID does not match the environment, the notebook is in.')
+        self._job_id = value
+
+    @property
+    def pipeline_job_id(self):
+        return self._pipeline_job_id
+
+    @pipeline_job_id.setter
+    def pipeline_job_id(self, value):
+        if value != mssparkutils.runtime.context.get('pipelinejobid'): # type: ignore
+            raise ValueError('Pipeline job ID does not match the environment, the notebook is in.')
+        self._pipeline_job_id = value
+
+    @property
+    def pool(self):
+        return self._pool
+
+    @pool.setter
+    def pool(self, value):
+        if value != mssparkutils.env.getPoolName(): # type: ignore
+            raise ValueError('Pool does not match the environment, the notebook is in.')
+        self._pool = value
+
+    @property
+    def cluster(self):
+        return self._cluster
+
+    @cluster.setter
+    def cluster(self, value):
+        if value != mssparkutils.env.getClusterId(): # type: ignore
+            raise ValueError('Workspace name does not match the environment, the notebook is in.')
+        self._cluster = value
+
+    def _construct_paths(self):
         self.azure_storage_name = f"dls{self.data_product_name}{self.environment}{self.data_product_version}"
         self.curated_path = f"abfss://curated@{self.azure_storage_name}.dfs.core.windows.net"
         self.standardized_curated_path = f"{self.curated_path}/standardized"
         self.sensitive_standardized_curated_path = f"{self.curated_path}/sensitive-standardized"
 
-        self.notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
-        self.job_id = mssparkutils.env.getJobId() # type: ignore
-        self.pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
-        self.pool = mssparkutils.env.getPoolName() # type: ignore
-        self.cluster = mssparkutils.env.getClusterId() # type: ignore
-
-        self.set_spark_datetime_settings()
-    
     def __eq__(self, other_notebook: Notebook) -> bool: # type: ignore
 
-        same_workspace_name = self.workspace_name == other_notebook.workspace_name
+        same_workspace_name = self._workspace_name == other_notebook.workspace_name
         same_job_id = self.job_id == other_notebook.job_id
         same_notebook_name = self.notebook_name and other_notebook.notebook_name
         same_pipeline_job_id = self.pipeline_job_id and other_notebook.pipeline_job_id
@@ -117,7 +180,7 @@ class Notebook(Utils):
         return same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
 
     def __str__(self) -> str:
-        return f'{self.notebook_name} in {self.workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
+        return f'{self.notebook_name} in {self._workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
@@ -265,20 +328,87 @@ class DataProduct(Notebook):
 
 class Table(DataProduct):
     nbr_tables = 0
+    used_tables = {}
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated') -> None:
         super().__init__()
-        Table.nbr_tables += 1
 
-        self.name = name
-        self.layer = layer
+        Table.nbr_tables += 1
+        self._update_used_tables()
+
+        self._name = name
+        self._layer = layer
+
         self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
-        self.path = f'{self.curated_path if layer == "curated" else self.trusted_path}/{self.sensitivity}/{self.source}/{self.database}/{self.name}.delta'
-        self.DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
+        self.path = self._get_path()
+        self.DeltaTable = self._get_delta_table()
         self.load_type = load_type if load_type else self._get_load_type()
+
         self.table_size = None
         self.target_file_size = None
     
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, str):
+            raise ValueError('String expected for name.')
+        old_name = self._name
+        self._name = value
+
+        try:
+            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
+        except ValueError:
+            self._name = old_name
+            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
+            ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
+
+        self._reset_values()
+    
+    @property
+    def layer(self):
+        return self._layer
+    
+    @layer.setter
+    def layer(self, value):
+        if value not in ['curated', 'trusted']:
+            raise ValueError('Layer must be curated or trusted.')
+        
+        old_layer = self._layer
+        self._layer = value
+
+        try:
+            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
+        except ValueError:
+            self._layer = old_layer
+            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
+            ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
+
+        self._reset_values()
+
+    def _update_used_tables(self):
+        existing_layers = Table.used_tables.get(self.name, [])
+        if self.layer in existing_layers:
+            print(f'A Table object for {self.name} in {self.other_layer} is already created')
+        if existing_layers:
+            Table.used_tables[self.name].append(self.layer)
+        else:
+            Table.used_tables[self.name] = [self.layers]
+
+    def _get_path(self):
+        self.path = f'{self.curated_path if self.layer == "curated" else self.trusted_path}/{self.sensitivity}/{self.source}/{self.database}/{self.name}.delta'
+    
+    def _get_delta_table(self):
+        self.DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
+    
+    def _reset_values(self):
+        self.path = self._get_path()
+        self.DeltaTable = self._get_delta_table()
+        self.table_size = None
+        self.target_file_size = None
+
     def __eq__(self, other_table: Table) -> bool: # type: ignore
         return self.super() == other_table.super() and self.name == other_table.name and self.layer == other_table.layer
 
@@ -505,12 +635,23 @@ class Table(DataProduct):
 
 
 class DataFrame(Table):
+    file_format = 'delta'
+
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None) -> None:
         super().__init__(name = name, load_type = load_type, layer = layer)
-        self.version = version
+        self.latest_version = self.get_version()
+        self._version = version
         self.timestamp = timestamp
         self.load_dataframe()
-        self.version = self.get_version()
+
+    @property
+    def version(self):
+        return self._version
+
+    @version.setter
+    def version(self, value):
+
+        self._version = value
     
     def __eq__(self, other_dataframe: DataFrame) -> bool:
 
@@ -563,7 +704,7 @@ class DataFrame(Table):
             self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore
 
     def get_version(self) -> int:
-        return self.version if self.version else int(self.history(1).select('version').collect()[0][0])
+        return int(self.history(1).select('version').collect()[0][0])
 
     def load_version_minus_n(self, timetravel: int = 1) -> DataFrame:
         return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
