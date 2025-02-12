@@ -207,7 +207,7 @@ class Notebook(Utils):
     def cluster(self, value):
         raise ValueError("Cluster can't be set manually.")
 
-    def _construct_paths(self):
+    def _construct_paths(self) -> None:
         self._azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
         self._curated_path = f"abfss://curated@{self._azure_storage_name}.dfs.core.windows.net"
         self._standardized_curated_path = f"{self._curated_path}/standardized"
