@@ -418,22 +418,28 @@ class Table(DataProduct):
     nbr_tables = 0
     used_tables = {}
 
-    def __init__(self, name: str, load_type: str = None, layer: str = 'curated') -> None:
+    def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
+        if not isinstance(name, str):
+            raise ValueError('String expected for name.')
+        if layer not in ['curated', 'trusted']:
+            raise ValueError('Layer must be curated or trusted.')
+        if not isinstance(load_type, str | None):
+            raise ValueError('String expected for load_type.')
+
         super().__init__()
 
         Table.nbr_tables += 1
         self._update_used_tables()
-
+        
         self._name = name
         self._layer = layer
 
-        self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
-        self.path = self._get_path()
-        self.DeltaTable = self._get_delta_table()
-        self.load_type = load_type if load_type else self._get_load_type()
+        self._path = self._find_path()
+        self._DeltaTable = self._get_delta_table()
+        self._load_type = load_type if load_type else self._get_load_type()
 
-        self.table_size = None
-        self.target_file_size = None
+        self._table_size = None
+        self._target_file_size = None
     
     @property
     def name(self):
@@ -447,11 +453,11 @@ class Table(DataProduct):
         self._name = value
 
         try:
-            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
+            self._path = self._find_path()
         except ValueError:
             self._name = old_name
-            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
-            ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
+            self.path = self._find_path()
+            raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
 
         self._reset_values()
     
@@ -468,49 +474,104 @@ class Table(DataProduct):
         self._layer = value
 
         try:
-            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
+            self._path = self._find_path()
         except ValueError:
             self._layer = old_layer
-            self.sensitivity, self.source, self.database = self._find_sensitivity_source_database()
-            ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
+            self._path = self._find_path()
+            raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
 
         self._reset_values()
 
+    @property
+    def load_type(self):
+        return self._load_type
+
+    @load_type.setter
+    def load_type(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Value must be a string.")
+        
+        self._load_type = value
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
+
+    @property
+    def DeltaTable(self):
+        return self._DeltaTable
+
+    @DeltaTable.setter
+    def DeltaTable(self, value):
+        raise ValueError("DeltaTable can't be set manually. Set the name and layer attributes correctly to get the DeltaTable representation.")
+
+    @property
+    def table_size(self):
+        return self._table_size
+
+    @table_size.setter
+    def table_size(self, value):
+        if not isinstance(value, float | int) or value <= 0:
+            raise ValueError("Table size must be a positive number.")
+        
+        print("Consider calculating the table size with the get_target_table_size method instead of manually setting it.")
+        self._table_size = value
+
+    @property
+    def target_file_size(self):
+        return self._target_file_size
+
+    @target_file_size.setter
+    def target_file_size(self, value):
+        if not isinstance(value, str):
+            raise ValueError("target_file_size must be a string")
+        
+        print("Consider calculating the target file size with the calculate_target_file_size method instead of manually setting it.")
+        self._target_file_size = value
+
     def _update_used_tables(self):
         existing_layers = Table.used_tables.get(self.name, [])
+
         if self.layer in existing_layers:
-            print(f'A Table object for {self.name} in {self.other_layer} is already created')
-        if existing_layers:
+            print(f'A Table object for {self.name} in {self.layer} is already created')
+            return
+
+        if len(existing_layers) != 0:
             Table.used_tables[self.name].append(self.layer)
+
         else:
             Table.used_tables[self.name] = [self.layers]
-
-    def _get_path(self):
-        self.path = f'{self.curated_path if self.layer == "curated" else self.trusted_path}/{self.sensitivity}/{self.source}/{self.database}/{self.name}.delta'
     
     def _get_delta_table(self):
-        self.DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
+        self._DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
     
     def _reset_values(self):
-        self.path = self._get_path()
-        self.DeltaTable = self._get_delta_table()
-        self.table_size = None
-        self.target_file_size = None
+        self._path = self._find_path()
+        self._DeltaTable = self._get_delta_table()
+        self._table_size = None
+        self._target_file_size = None
 
     def __eq__(self, other_table: Table) -> bool: # type: ignore
-        return self.super() == other_table.super() and self.name == other_table.name and self.layer == other_table.layer
+        return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
 
     def __str__(self) -> str:
-        return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer"
+        return f"{self.data_product_name} data product's {self._name} table in {self._layer} layer"
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, layer={self.layer})"
+        return f"{type(self).__name__}(name='{self._name}', load_type={self._load_type}, layer={self._layer})"
 
-    def _find_sensitivity_source_database(self) -> Tuple[str, str, str]:
-        table = self.curated_tables.get(self.name)
-        if not table:
-            raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
-        return table.get('sensitivity'), table.get('source'), table.get('database')
+    def _find_path(self) -> Tuple[str, str, str]:
+        if self.name in self.curated_tables and self.layer == 'curated':
+            return self.curated_tables.get(self._name)
+
+        if self.name in self.trusted_tables and self.layer == 'trusted':
+            return self.trusted_path.get(self._name)
+
+        raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
     def vacuum(self, hours: int = 168, force: bool = False) -> None:
 
@@ -520,7 +581,7 @@ class Table(DataProduct):
         if hours < 168 and force:
             spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
 
-        self.DeltaTable.vacuum(retentionHours = hours)
+        self._DeltaTable.vacuum(retentionHours = hours)
 
     def zorder(self, columns: list, partition_filter: str = None) -> None:
 
@@ -529,19 +590,19 @@ class Table(DataProduct):
             raise ValueError('Columns must be set')
 
         if not partition_filter:
-            self.DeltaTable.optimize().executeZOrderBy(*columns)
+            self._DeltaTable.optimize().executeZOrderBy(*columns)
         else:
-            self.DeltaTable.optimize().where(partition_filter).executeZOrderBy(*columns)
+            self._DeltaTable.optimize().where(partition_filter).executeZOrderBy(*columns)
 
     def optimize(self, partition_filter: str = None) -> None:
 
         if not partition_filter:
-            self.DeltaTable.optimize().executeCompaction()
+            self._DeltaTable.optimize().executeCompaction()
         else:
-            self.DeltaTable.optimize().where(partition_filter).executeCompaction()
+            self._DeltaTable.optimize().where(partition_filter).executeCompaction()
 
     def history(self, limit: int = 10) -> DataFrame:
-        return self.DeltaTable.history(limit)
+        return self._DeltaTable.history(limit)
 
     def _get_load_type(self) -> str:
         """
@@ -554,7 +615,7 @@ class Table(DataProduct):
         operations = [row.operation
                       for row
                       in self.history(20).select(F.col('operation')).collect()
-                      if row.operation not in ['OPTIMIZE', 'VACUUM', 'RESTORE']]
+                      if row.operation in ['MERGE', 'WRITE']]
 
         return 'scd1' if max(set(operations), key=operations.count) == 'MERGE' else 'full'
     
@@ -566,7 +627,7 @@ class Table(DataProduct):
             int: target table size in bytes
         """
 
-        detail_df = self.DeltaTable.detail()
+        detail_df = self._DeltaTable.detail()
         table_size = detail_df.select('sizeInBytes').collect()[0][0]
         self.table_size = table_size
         return table_size
@@ -584,7 +645,7 @@ class Table(DataProduct):
             str: target table size in MB
         """
 
-        target_table_size = self.table_size if self.table_size else self.get_target_table_size()
+        target_table_size = self._table_size if self._table_size else self.get_target_table_size()
         size_in_gb = target_table_size / 1024 / 1024 / 1024
 
         if size_in_gb < 10:
@@ -596,7 +657,7 @@ class Table(DataProduct):
         else:
             target_file_size = '1024mb'
 
-        self.target_file_size = target_file_size
+        self._target_file_size = target_file_size
         return target_file_size
     
     def calculate_enforce_save_target_table_metadata(self, print: bool = False) -> None:
@@ -608,17 +669,17 @@ class Table(DataProduct):
         Enable autoOptimize and autoCompact for setting the data layout for upcoming writes
         """
 
-        target_file_size = self.target_file_size if self.target_file_size else self.calculate_target_file_size()
+        target_file_size = self._target_file_size if self._target_file_size else self.calculate_target_file_size()
 
         # Set the table properties, so that the upcoming writes are using the same target file sizes
         # Effects optimize, zorder, autoopzimite and autocompact
-        spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.targetFileSize'='{target_file_size}')") # type: ignore
+        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.targetFileSize'='{target_file_size}')") # type: ignore
 
         # Enable autooptimize, so that the later executions will write new files with target_file_size
-        spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
+        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
 
         if print:
-            details = self.DeltaTable.detail()
+            details = self._DeltaTable.detail()
             print(f"Table properties for {path}: {details.select('properties').collect()[0][0]}") 
    
     def calculate_zorder_and_analyse_columns(self, primary_keys: list[str]) -> tuple[list[str], list[str]]:
