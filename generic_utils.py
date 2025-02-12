@@ -215,10 +215,50 @@ class Notebook(Utils):
         self._cluster = value
 
     def _construct_paths(self):
-        self.azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
-        self.curated_path = f"abfss://curated@{self.azure_storage_name}.dfs.core.windows.net"
-        self.standardized_curated_path = f"{self.curated_path}/standardized"
-        self.sensitive_standardized_curated_path = f"{self.curated_path}/sensitive-standardized"
+        self._azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
+        self._curated_path = f"abfss://curated@{self._azure_storage_name}.dfs.core.windows.net"
+        self._standardized_curated_path = f"{self._curated_path}/standardized"
+        self._sensitive_standardized_curated_path = f"{self._curated_path}/sensitive-standardized"
+
+    @property
+    def azure_storage_name(self):
+        return self._azure_storage_name
+
+    @azure_storage_name.setter
+    def azure_storage_name(self, value):
+        raise ValueError(f"""Azure_storage_name can't be changed manually to {value}.
+                             Set the data_product_name, environment and data_product_version attributes
+                             and the storage_account_name attribute will be set accordingly.""")
+
+    @property
+    def curated_path(self):
+        return self._curated_path
+
+    @curated_path.setter
+    def curated_path(self, value):
+        raise ValueError(f"""Curated_path can't be changed manually to {value}.
+                             Set the data_product_name, environment and data_product_version attributes
+                             and the curated_path attribute will be set accordingly.""")
+
+    @property
+    def standardized_curated_path(self):
+        return self._standardized_curated_path
+
+    @standardized_curated_path.setter
+    def standardized_curated_path(self, value):
+        raise ValueError(f"""Standardized_curated_path can't be changed manually to {value}.
+                             Set the data_product_name, environment and data_product_version attributes
+                             and the standardized_curated_path attribute will be set accordingly.""")
+
+    @property
+    def sensitive_standardized_curated_path(self):
+        return self._sensitive_standardized_curated_path
+
+    @sensitive_standardized_curated_path.setter
+    def sensitive_standardized_curated_path(self, value):
+        raise ValueError(f"""Sensitive_standardized_curated_path can't be changed manually to {value}.
+                             Set the data_product_name, environment and data_product_version attributes
+                             and the sensitive_standardized_curated_path attribute will be set accordingly.""")
 
     def __eq__(self, other_notebook: Notebook) -> bool: # type: ignore
 
