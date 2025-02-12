@@ -29,30 +29,21 @@ class Utils(object):
         subfolders within maximum recursion depth.
 
         Args:
-            path (str): path of the listing.
-            max_depth (str, optional): depth of the listing. Defaults to 1.
+            path (str): path of the listing
+            max_depth (str, optional): depth of the listing
+                Defaults to 1
 
         Returns:
-            Iterator[str]: returns all files until max_depth has been reached.
+            Iterator[str]: returns an iterator with all files until max_depth has been reached
         """
 
-        folder = mssparkutils.fs.ls(path) # type: ignore
-
-        for file in folder:
+        for file in  mssparkutils.fs.ls(path): # type: ignore
             if file.size != 0:
                 yield file
-
-        if max_depth > 1:
-            for file in folder:
-                if file.size != 0:
-                    continue
-                for directory in self.deep_ls(file.path, max_depth - 1):
-                    yield directory
-
-        else:
-            for file in folder:
-                if file.size == 0:
-                    yield file
+            elif max_depth > 1:
+                yield from self.deep_ls(file.path, max_depth - 1)
+            else:
+                yield file
 
     def get_previous_date(days_back: int) -> str:
         """
@@ -650,7 +641,6 @@ class DataFrame(Table):
 
     @version.setter
     def version(self, value):
-
         self._version = value
     
     def __eq__(self, other_dataframe: DataFrame) -> bool:
