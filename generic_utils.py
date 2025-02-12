@@ -86,7 +86,7 @@ class Notebook(Utils):
 
     @workspace_name.setter
     def workspace_name(self, value):
-        raise ValueError(f"""Workspace name can't be changed to {value}. Workspace name is extraced using the mssparkutils library.
+        raise ValueError(f"""Workspace_name can't be changed to {value}. Workspace name is extraced using the mssparkutils library.
                              You can manually change the data_product_name, environment and data_product_version attributes
                              if you would like to work with data from a different data product or environment.
                           """)
@@ -97,6 +97,9 @@ class Notebook(Utils):
 
     @data_product_name.setter
     def data_product_name(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Data_product_name attribute must be a string.")
+
         if value != self._data_product_name:
             print(f"""Data product name is by default extracted from the workspace name ({self._workspace_name}).
                       Current value is {self._data_product_name}, which you'll overwrite.
@@ -170,9 +173,7 @@ class Notebook(Utils):
 
     @notebook_name.setter
     def notebook_name(self, value):
-        if value != mssparkutils.runtime.context.get('currentNotebookName'): # type: ignore
-            raise ValueError('Notebook name does not match the environment, the notebook is in.')
-        self._notebook_name = value
+        raise ValueError("Notebook name can't be set manually.")
 
     @property
     def job_id(self):
@@ -180,9 +181,7 @@ class Notebook(Utils):
 
     @job_id.setter
     def job_id(self, value):
-        if value != mssparkutils.env.getJobId(): # type: ignore
-            raise ValueError('Job ID does not match the environment, the notebook is in.')
-        self._job_id = value
+        raise ValueError("Job ID can't be set manually.")
 
     @property
     def pipeline_job_id(self):
@@ -190,9 +189,7 @@ class Notebook(Utils):
 
     @pipeline_job_id.setter
     def pipeline_job_id(self, value):
-        if value != mssparkutils.runtime.context.get('pipelinejobid'): # type: ignore
-            raise ValueError('Pipeline job ID does not match the environment, the notebook is in.')
-        self._pipeline_job_id = value
+        raise ValueError("Pipeline job ID can't be set manually.")
 
     @property
     def pool(self):
@@ -200,9 +197,7 @@ class Notebook(Utils):
 
     @pool.setter
     def pool(self, value):
-        if value != mssparkutils.env.getPoolName(): # type: ignore
-            raise ValueError('Pool does not match the environment, the notebook is in.')
-        self._pool = value
+        raise ValueError("Pool cant be set manually.")
 
     @property
     def cluster(self):
@@ -210,9 +205,7 @@ class Notebook(Utils):
 
     @cluster.setter
     def cluster(self, value):
-        if value != mssparkutils.env.getClusterId(): # type: ignore
-            raise ValueError('Workspace name does not match the environment, the notebook is in.')
-        self._cluster = value
+        raise ValueError("Cluster can't be set manually.")
 
     def _construct_paths(self):
         self._azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
@@ -283,7 +276,8 @@ class Notebook(Utils):
         spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore
         spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore
 
-    def set_exit_value(self, key: str, value: Union[str, list]) -> None:
+    @classmethod
+    def set_exit_value(cls, key: str, value: Union[str, list]) -> None:
         """
         Set or extend the exit values.
         Set:
@@ -294,31 +288,31 @@ class Notebook(Utils):
             - if key did exist and was a list and the new one is a string (append)
         """
 
-        if type(value) not in [str, list]:
+        if not isinstance(value, str | list):
             raise ValueError('value must be of type string or list')
 
-        if key not in self.exit_values.keys():
-            self.exit_values[key] = value
+        if key not in cls.exit_values.keys():
+            cls.exit_values[key] = value
             return
 
-        previous_value = self.exit_values.get(key)
-        if type(previous_value) == str:
-            self.exit_values[key] = value
+        previous_value = cls.exit_values.get(key)
+        if isinstance(previous_value, str):
+            cls.exit_values[key] = value
             return
 
-        if type(value) == list:
+        if isinstance(previous_value, list):
             previous_value.extend(value)
-            self.exit_values[key] = previous_value
+            cls.exit_values[key] = previous_value
             return
 
         previous_value.append(value)
-        self.exit_values[key] = previous_value
+        cls.exit_values[key] = previous_value
 
     def exit(self) -> None:
         """
         Exit the notebook with the previously set exit values
         """
-        mssparkutils.notebook.exit(json.dumps(self.exit_values)) # type: ignore
+        mssparkutils.notebook.exit(json.dumps(cls.exit_values)) # type: ignore
 
 
 class DataProduct(Notebook):
