@@ -12,7 +12,7 @@ from pyspark.sql import DataFrame # type: ignore
 class Utils(object):
     _instance = None
 
-    def __new__(cls) -> Utils: # type: ignore
+    def __new__(cls):
          if not cls._instance:
              cls._instance = super().__new__(cls)
          return cls._instance
@@ -46,30 +46,18 @@ class Utils(object):
                 yield file
 
     def get_previous_date(days_back: int) -> str:
-        """
-        Calculate and return the date a specified number of days back from the current date.
-
-        Args:
-            days_back (int): The number of days to go back from the current date.
-
-        Returns:
-            str: The date in 'YYYY-MM-DD' format representing the date calculated days_back from today.
-        """
-        date_back = datetime.now() - timedelta(days=days_back)
-        return date_back.strftime('%Y-%m-%d')
+        return (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
 
     def write_non_distributed_json(content: dict, target_path: str) -> None:
         """
         Writes a json file to abfss as per one file and not as a distributed json object.
 
         Args:
-            content (dict): content of the file to be written.
-            target_path (str): abfss:// path to write to.
+            content (dict): content of the file to be written
+            target_path (str): abfss:// path to write to
         """
 
-        file_name = target_path.split("/")[-1]
-        temp_path = f"/tmp/{file_name}"
-
+        temp_path = f"/tmp/{target_path.split("/")[-1]}"
         with open(temp_path, 'w') as local_file:
             json.dump(content, local_file)
 
@@ -79,10 +67,9 @@ class Utils(object):
 class Notebook(Utils):
     exit_values = {}
 
-    def __init__(self) -> None:
+    def __init__(self):
         self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
-
-        _, self.data_product_name, self.environment, self.data_product_version = self._workspace_name.split('-')
+        _, self._data_product_name, self._environment, self._data_product_version = self._workspace_name.split('-')
         self._construct_paths()
 
         self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
@@ -99,9 +86,83 @@ class Notebook(Utils):
 
     @workspace_name.setter
     def workspace_name(self, value):
-        if value != mssparkutils.env.getWorkspaceName(): # type: ignore
-            raise ValueError('Workspace name does not match the environment, the notebook is in.')
-        self._workspace_name = value
+        raise ValueError(f"""Workspace name can't be changed to {value}. Workspace name is extraced using the mssparkutils library.
+                             You can manually change the data_product_name, environment and data_product_version attributes
+                             if you would like to work with data from a different data product or environment.
+                          """)
+
+    @property
+    def data_product_name(self):
+        return self._data_product_name
+
+    @data_product_name.setter
+    def data_product_name(self, value):
+        if value != self._data_product_name:
+            print(f"""Data product name is by default extracted from the workspace name ({self._workspace_name}).
+                      Current value is {self._data_product_name}, which you'll overwrite.
+                      The path properties will be recalculated by this operation as well.
+                      New values will be:
+                        data_product_name: {value}
+                        environment: {self._environment}
+                        data_product_version: {self._data_product_version}
+                   """)
+            self._data_product_name = value
+            self._construct_paths()
+        else:
+            print("Data_product_name attribute is already set to the same value.")
+
+    @property
+    def environment(self):
+        return self._environment
+
+    @environment.setter
+    def environment(self, value):
+        if value not in ['p', 'd']:
+            raise ValueError("Environment attribute must be either p or d.")
+
+        if value == self._environment:
+            print("Environment attribute is already set to the same value.")
+
+        if value == 'd':
+            print("You can't work with dev data in the prod workspace.")
+            return
+
+        print(f"""Environment is by default extracted from the workspace name ({self._workspace_name}).
+                  Current value is d, which you'll overwrite to p for prod.
+                  You'll be working with prod data in the dev workspace.
+
+                  The path properties will be recalculated by this operation as well.
+                  New values will be:
+                        data_product_name: {self._data_product_name}
+                        environment: {value}
+                        data_product_version: {self._data_product_version}
+               """)
+        self._environment = value
+        self._construct_paths()
+
+    @property
+    def data_product_version(self):
+        return self._data_product_version
+
+    @data_product_version.setter
+    def data_product_version(self, value):
+        if not isinstance(value, str) or len(value) != 3:
+            raise ValueError("data_product_version attribute needs to be a 3 character long string.")
+
+        if value == self._data_product_version:
+            print("Data_product_version attribute is already set to the same value.")
+            return
+
+        print(f"""Data_product_version is by default extracted from the workspace name ({self._workspace_name}).
+                  Current value is {self._data_product_version}, which you'll overwrite.
+                  The path properties will be recalculated by this operation as well.
+                  New values will be:
+                        data_product_name: {self._data_product_name}
+                        environment: {self._environment}
+                        data_product_version: {value}
+               """)
+        self._data_product_version = value
+        self._construct_paths()
 
     @property
     def notebook_name(self):
@@ -154,7 +215,7 @@ class Notebook(Utils):
         self._cluster = value
 
     def _construct_paths(self):
-        self.azure_storage_name = f"dls{self.data_product_name}{self.environment}{self.data_product_version}"
+        self.azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
         self.curated_path = f"abfss://curated@{self.azure_storage_name}.dfs.core.windows.net"
         self.standardized_curated_path = f"{self.curated_path}/standardized"
         self.sensitive_standardized_curated_path = f"{self.curated_path}/sensitive-standardized"
