@@ -212,6 +212,7 @@ class Notebook(Utils):
         self._curated_path = f"abfss://curated@{self._azure_storage_name}.dfs.core.windows.net"
         self._standardized_curated_path = f"{self._curated_path}/standardized"
         self._sensitive_standardized_curated_path = f"{self._curated_path}/sensitive-standardized"
+        self._trusted_path = f"abfss://trusted@{self._azure_storage_name}.dfs.core.windows.net"
 
     @property
     def azure_storage_name(self):
@@ -252,6 +253,16 @@ class Notebook(Utils):
         raise ValueError(f"""Sensitive_standardized_curated_path can't be changed manually to {value}.
                              Set the data_product_name, environment and data_product_version attributes
                              and the sensitive_standardized_curated_path attribute will be set accordingly.""")
+
+    @property
+    def trusted_path(self):
+        return self._trusted_path
+
+    @trusted_path.setter
+    def trusted_path(self, value):
+        raise ValueError(f"""Trusted_path can't be changed manually to {value}.
+                             Set the data_product_name, environment and data_product_version attributes
+                             and the trusted_path attribute will be set accordingly.""")
 
     def __eq__(self, other_notebook: Notebook) -> bool: # type: ignore
 
@@ -316,10 +327,10 @@ class Notebook(Utils):
 
 
 class DataProduct(Notebook):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
         self.curated_tables = self.list_tables_in_curated()
-        self.trusted_tables = {}
+        self.trusted_tables = self.list_tables_in_trusted()
 
     def __eq__(self, other_data_product: DataProduct) -> bool: # type: ignore
         return self.azure_storage_name == other_data_product.azure_storage_name
@@ -333,42 +344,33 @@ class DataProduct(Notebook):
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
     
-    def list_tables_in_curated(self) -> dict:
+    def get_all_deltas(self, path_list: list[str], max_depth: int = 3) -> dict:
         """
-        Create a dictionary of the available tables in curated with their metadata
+        Create a dictionary of the available tables with their path
 
         Returns: dict
-            E.g. {'test_table': {'sensitivity': 'standardized',
-                                'source': 'sap',
-                                'database': 'x04_slt'}}            
+            E.g. {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/standardized/sap/x04_slt/test_table.delta'}            
         """
 
-        table_list = [file.path
-                      for file
-                      in self.deep_ls(path = self.standardized_curated_path,
-                                      max_depth = 3)
-                      if file.path.endswith('.delta')]
+        table_list = [
+            file.path
+            for path in path_list
+            for depth in range(max_depth)
+            for file in self.deep_ls(path = path, max_depth = depth)
+            if file.path.endswith('.delta')
+        ]
 
-        table_list.extend([file.path
-                           for file
-                           in self.deep_ls(path = self.sensitive_standardized_curated_path,
-                                           max_depth = 3)
-                           if file.path.endswith('.delta')])
+        return {
+            table_path.split('/')[-1].replace('.delta', ''): {'url': table_path}
+            for table_path in table_list
+        }
 
-        curated_dict = {}
 
-        for table_path in table_list:
-            _, _, _, sensitivity, source, database, table_name = table_path.split('/')
-            table_name = table_name.replace('.delta', '')
-
-            curated_dict.update({table_name: {'sensitivity': sensitivity,
-                                              'source': source,
-                                              'database': database}})
-        
-        return curated_dict
+    def list_tables_in_curated(self) -> dict:
+        return self.get_all_deltas([self._standardized_curated_path, self._sensitive_standardized_curated_path])
     
     def list_tables_in_trusted(self) -> dict:
-        raise NotImplementedError
+        return self.get_all_deltas([self._trusted_path], max_depth = 4)
 
     def optimize_all(self, layer: str = 'curated', partition_filter: str = None):
         """
