@@ -99,6 +99,7 @@ class Notebook(Utils):
         self._construct_paths()
 
         self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        
         self._job_id = mssparkutils.env.getJobId() # type: ignore
         self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
         self._pool = mssparkutils.env.getPoolName() # type: ignore
@@ -197,41 +198,21 @@ class Notebook(Utils):
     def notebook_name(self):
         return self._notebook_name
 
-    @notebook_name.setter
-    def notebook_name(self, value):
-        raise ValueError("Notebook name can't be set manually.")
-
     @property
     def job_id(self):
         return self._job_id
-
-    @job_id.setter
-    def job_id(self, value):
-        raise ValueError("Job ID can't be set manually.")
 
     @property
     def pipeline_job_id(self):
         return self._pipeline_job_id
 
-    @pipeline_job_id.setter
-    def pipeline_job_id(self, value):
-        raise ValueError("Pipeline job ID can't be set manually.")
-
     @property
     def pool(self):
         return self._pool
 
-    @pool.setter
-    def pool(self, value):
-        raise ValueError("Pool cant be set manually.")
-
     @property
     def cluster(self):
         return self._cluster
-
-    @cluster.setter
-    def cluster(self, value):
-        raise ValueError("Cluster can't be set manually.")
 
     def _construct_paths(self) -> None:
         self._azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
@@ -464,31 +445,13 @@ class DataPlaceholder(DataProduct):
     def name(self):
         return self._name
 
-    @name.setter
-    def name(self, value):
-        if value != self._name:
-            raise ValueError(f"Name can't be changed. Create a new instance with (name = {value}, layer = {self._layer}, load_type = {self._load_type}).")
-        print("Name is already set to the same value.")
-
     @property
     def layer(self):
         return self._layer
 
-    @layer.setter
-    def layer(self, value):
-        if value != self._layer:
-            raise ValueError(f"Name can't be changed. Create a new instance with (name = {self._name}, layer = {value}, load_type = {self._load_type}).")
-        print("Name is already set to the same value.")
-
     @property
     def path(self):
         return self._path
-
-    @path.setter
-    def path(self, value):
-        if value != self._path:
-            raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
-        print("Path is already set to the same value.")
 
     def _find_path(self) -> Tuple[str, str, str]:
         if self.name in self.curated_tables and self.layer == 'curated':
@@ -522,17 +485,9 @@ class Table(DataPlaceholder):
     def DeltaTable(self):
         return self._DeltaTable
 
-    @DeltaTable.setter
-    def DeltaTable(self, value):
-        raise ValueError("DeltaTable can't be set manually. Set the name and layer attributes correctly to get the DeltaTable representation.")
-
     @property
     def dataframe(self):
         return self._dataframe
-
-    @dataframe.setter
-    def dataframe(self, value):
-        raise ValueError("dataframe can't be set manually. Set the name and layer attributes correctly to get the dataframe representation.")
 
     def _get_delta_table(self):
         self._DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
