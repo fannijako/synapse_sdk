@@ -9,19 +9,23 @@ class TestClass:
 def instance():
     return TestClass()
 
-def test_positive_number_assignment_to_integer(instance):
+def test_positive_number_assignment_to_positive_number(instance):
     instance.number = 10
     assert instance.number == 10
 
-def test_negative_number_assignment_to_integer(instance):
+def test_float_assignment_to_positive_number(instance):
+    instance.number = 10.2
+    assert instance.number == 10.2
+
+def test_negative_number_assignment_to_positive_number(instance):
     with pytest.raises(ValueError, match="positive number expected"):
         instance.number = -5
 
-def test_zero_assignment_to_integer(instance):
+def test_zero_assignment_to_positive_number(instance):
     with pytest.raises(ValueError, match="positive number expected"):
         instance.number = 0
 
-def test_non_numeric_assignment_to_integer(instance):
+def test_non_numeric_assignment_to_positive_number(instance):
     with pytest.raises(ValueError, match="positive number expected"):
         instance.number = "string"
 
