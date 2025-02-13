@@ -414,7 +414,7 @@ class DataProduct(Notebook):
             execute_layer(self.trusted_tables.keys(), 'trusted')
 
 
-class Table(DataProduct):
+class DataPlaceholder(DataProduct):
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
 
         if not isinstance(name, str):
@@ -430,7 +430,7 @@ class Table(DataProduct):
         self._layer = layer
         self._load_type = load_type
 
-        self.calculate_table_properties()
+        self._path = self._find_path()
 
     @property
     def name(self):
@@ -439,32 +439,8 @@ class Table(DataProduct):
     @name.setter
     def name(self, value):
         if value != self._name:
-            raise ValueError(f"Name can't be changed. Create a new instance with Table(name = {value}, layer = {self._layer}).")
+            raise ValueError(f"Name can't be changed. Create a new instance with (name = {value}, layer = {self._layer}, load_type = {self._load_type}).")
         print("Name is already set to the same value.")
-
-    @property
-    def layer(self):
-        return self._layer
-
-    @layer.setter
-    def layer(self, value):
-        if value not in ['curated', 'trusted']:
-            raise ValueError('Layer must be curated or trusted.')
-        if value == self._layer:
-            print("Layer is already set to the same value.")
-            return
-
-        old_layer = self._layer
-        self._layer = value
-
-        try:
-            self._path = self._find_path()
-        except ValueError:
-            self._layer = old_layer
-            self._path = self._find_path()
-            raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
-
-        self.calculate_table_properties()
 
     @property
     def load_type(self):
@@ -477,6 +453,16 @@ class Table(DataProduct):
         self._load_type = value
 
     @property
+    def layer(self):
+        return self._layer
+
+    @layer.setter
+    def layer(self, value):
+        if value != self._layer:
+            raise ValueError(f"Name can't be changed. Create a new instance with (name = {self._name}, layer = {value}, load_type = {self._load_type}).")
+        print("Name is already set to the same value.")
+
+    @property
     def path(self):
         return self._path
 
@@ -485,6 +471,28 @@ class Table(DataProduct):
         if value != self._path:
             raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
         print("Path is already set to the same value.")
+
+    def _find_path(self) -> Tuple[str, str, str]:
+        if self.name in self.curated_tables and self.layer == 'curated':
+            return self.curated_tables.get(self._name)
+
+        if self.name in self.trusted_tables and self.layer == 'trusted':
+            return self.trusted_path.get(self._name)
+
+        raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
+
+
+class Table(DataPlaceholder):
+    def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
+        super().__init__(name = name, load_type = load_type, layer = layer)
+        self.calculate_table_properties()
+
+    def calculate_table_properties(self):
+        self._DeltaTable = self._get_delta_table()
+        self.load_type = self.load_type if self.load_type else self._get_load_type()
+        self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
+        self._table_size = self.get_target_table_size()
+        self._target_file_size = self.calculate_target_file_size()
 
     @property
     def DeltaTable(self):
@@ -518,22 +526,13 @@ class Table(DataProduct):
         print("Consider calculating the target file size with the calculate_target_file_size method instead of manually setting it.")
         self._target_file_size = value
 
-    def calculate_table_properties(self):
-        self._path = self._find_path()
-        self._DeltaTable = self._get_delta_table()
-        self._load_type = self._load_type if self._load_type else self._get_load_type()
-        self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
-        self._table_size = self.get_target_table_size()
-        self._target_file_size = self.calculate_target_file_size()
+    @property
+    def dataframe(self):
+        return self._dataframe
 
-    def _find_path(self) -> Tuple[str, str, str]:
-        if self.name in self.curated_tables and self.layer == 'curated':
-            return self.curated_tables.get(self._name)
-
-        if self.name in self.trusted_tables and self.layer == 'trusted':
-            return self.trusted_path.get(self._name)
-
-        raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
+    @dataframe.setter
+    def dataframe(self, value):
+        raise ValueError("dataframe can't be set manually. Set the name and layer attributes correctly to get the dataframe representation.")
 
     def _get_delta_table(self):
         self._DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
@@ -741,7 +740,6 @@ class Table(DataProduct):
         """
         raise NotImplementedError
 
-    def copy_prod_data_to_dev(self):
         raise NotImplementedError
     
     def get_optimization_recommendations(self):
@@ -754,12 +752,95 @@ class Table(DataProduct):
 class DataFrame(DataProduct):
     file_format = 'delta'
 
-    def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None) -> None:
-        super().__init__(name = name, load_type = load_type, layer = layer)
+    def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None):
+
+        if not isinstance(name, str):
+            raise ValueError('String expected for name.')
+        if layer not in ['curated', 'trusted']:
+            raise ValueError('Layer must be curated or trusted.')
+        if not isinstance(load_type, str | None):
+            raise ValueError('String expected for load_type.')
+        if not isinstance(version, int | None) or version <= 0:
+            raise ValueError('Positive number expected for version.')
+        if not isinstance(timestamp, str | None):
+            raise ValueError('String expected for timestamp.')
+
+        super().__init__()
+
+        self._name = name
+        self._load_type = load_type
+        self._layer = layer
+        self._path = self._find_path()
+
         self.latest_version = self.get_version()
         self._version = version
-        self.timestamp = timestamp
+        self._timestamp = timestamp
+
         self.load_dataframe()
+
+    def _find_path(self) -> Tuple[str, str, str]:
+        if self.name in self.curated_tables and self.layer == 'curated':
+            return self.curated_tables.get(self._name)
+
+        if self.name in self.trusted_tables and self.layer == 'trusted':
+            return self.trusted_path.get(self._name)
+
+        raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if value != self._name:
+            raise ValueError(f"Name can't be changed. Create a new instance with DataFrame(name = {value}, load_type = {self._load_type}, layer = {self._layer}, version = {self._version}, timestamp = {self._timestamp}).")
+        print("Name is already set to the same value.")
+
+    @property
+    def layer(self):
+        return self._layer
+
+    @layer.setter
+    def layer(self, value):
+        if value not in ['curated', 'trusted']:
+            raise ValueError('Layer must be curated or trusted.')
+        if value == self._layer:
+            print("Layer is already set to the same value.")
+            return
+
+        old_layer = self._layer
+        self._layer = value
+
+        try:
+            self._path = self._find_path()
+        except ValueError:
+            self._layer = old_layer
+            self._path = self._find_path()
+            raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
+
+        self.calculate_table_properties()
+
+    @property
+    def load_type(self):
+        return self._load_type
+
+    @load_type.setter
+    def load_type(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Value must be a string.")
+        self._load_type = value
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, value):
+        if value != self._path:
+            raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
+        print("Path is already set to the same value.")
+
 
     @property
     def version(self):
