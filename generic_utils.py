@@ -415,10 +415,8 @@ class DataProduct(Notebook):
 
 
 class Table(DataProduct):
-    nbr_tables = 0
-    used_tables = {}
-
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
+
         if not isinstance(name, str):
             raise ValueError('String expected for name.')
         if layer not in ['curated', 'trusted']:
@@ -427,49 +425,35 @@ class Table(DataProduct):
             raise ValueError('String expected for load_type.')
 
         super().__init__()
-
-        Table.nbr_tables += 1
-        self._update_used_tables()
         
         self._name = name
         self._layer = layer
+        self._load_type = load_type
 
-        self._path = self._find_path()
-        self._DeltaTable = self._get_delta_table()
-        self._load_type = load_type if load_type else self._get_load_type()
+        self.calculate_table_properties()
 
-        self._table_size = None
-        self._target_file_size = None
-    
     @property
     def name(self):
         return self._name
 
     @name.setter
     def name(self, value):
-        if not isinstance(value, str):
-            raise ValueError('String expected for name.')
-        old_name = self._name
-        self._name = value
+        if value != self._name:
+            raise ValueError(f"Name can't be changed. Create a new instance with Table(name = {value}, layer = {self._layer}).")
+        print("Name is already set to the same value.")
 
-        try:
-            self._path = self._find_path()
-        except ValueError:
-            self._name = old_name
-            self.path = self._find_path()
-            raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
-
-        self._reset_values()
-    
     @property
     def layer(self):
         return self._layer
-    
+
     @layer.setter
     def layer(self, value):
         if value not in ['curated', 'trusted']:
             raise ValueError('Layer must be curated or trusted.')
-        
+        if value == self._layer:
+            print("Layer is already set to the same value.")
+            return
+
         old_layer = self._layer
         self._layer = value
 
@@ -480,7 +464,7 @@ class Table(DataProduct):
             self._path = self._find_path()
             raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
 
-        self._reset_values()
+        self.calculate_table_properties()
 
     @property
     def load_type(self):
@@ -490,7 +474,6 @@ class Table(DataProduct):
     def load_type(self, value):
         if not isinstance(value, str):
             raise ValueError("Value must be a string.")
-        
         self._load_type = value
 
     @property
@@ -499,7 +482,9 @@ class Table(DataProduct):
 
     @path.setter
     def path(self, value):
-        raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
+        if value != self._path:
+            raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
+        print("Path is already set to the same value.")
 
     @property
     def DeltaTable(self):
@@ -533,36 +518,13 @@ class Table(DataProduct):
         print("Consider calculating the target file size with the calculate_target_file_size method instead of manually setting it.")
         self._target_file_size = value
 
-    def _update_used_tables(self):
-        existing_layers = Table.used_tables.get(self.name, [])
-
-        if self.layer in existing_layers:
-            print(f'A Table object for {self.name} in {self.layer} is already created')
-            return
-
-        if len(existing_layers) != 0:
-            Table.used_tables[self.name].append(self.layer)
-
-        else:
-            Table.used_tables[self.name] = [self.layers]
-    
-    def _get_delta_table(self):
-        self._DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
-    
-    def _reset_values(self):
+    def calculate_table_properties(self):
         self._path = self._find_path()
         self._DeltaTable = self._get_delta_table()
-        self._table_size = None
-        self._target_file_size = None
-
-    def __eq__(self, other_table: Table) -> bool: # type: ignore
-        return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
-
-    def __str__(self) -> str:
-        return f"{self.data_product_name} data product's {self._name} table in {self._layer} layer"
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(name='{self._name}', load_type={self._load_type}, layer={self._layer})"
+        self._load_type = self._load_type if self._load_type else self._get_load_type()
+        self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
+        self._table_size = self.get_target_table_size()
+        self._target_file_size = self.calculate_target_file_size()
 
     def _find_path(self) -> Tuple[str, str, str]:
         if self.name in self.curated_tables and self.layer == 'curated':
@@ -573,36 +535,8 @@ class Table(DataProduct):
 
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
-    def vacuum(self, hours: int = 168, force: bool = False) -> None:
-
-        if hours < 168 and not force:
-            raise ValueError('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
-
-        if hours < 168 and force:
-            spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
-
-        self._DeltaTable.vacuum(retentionHours = hours)
-
-    def zorder(self, columns: list, partition_filter: str = None) -> None:
-
-        if len(columns) == 0:
-            # TODO: recommend columns
-            raise ValueError('Columns must be set')
-
-        if not partition_filter:
-            self._DeltaTable.optimize().executeZOrderBy(*columns)
-        else:
-            self._DeltaTable.optimize().where(partition_filter).executeZOrderBy(*columns)
-
-    def optimize(self, partition_filter: str = None) -> None:
-
-        if not partition_filter:
-            self._DeltaTable.optimize().executeCompaction()
-        else:
-            self._DeltaTable.optimize().where(partition_filter).executeCompaction()
-
-    def history(self, limit: int = 10) -> DataFrame:
-        return self._DeltaTable.history(limit)
+    def _get_delta_table(self):
+        self._DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
 
     def _get_load_type(self) -> str:
         """
@@ -659,8 +593,48 @@ class Table(DataProduct):
 
         self._target_file_size = target_file_size
         return target_file_size
+
+    def __eq__(self, other_table: Table) -> bool: # type: ignore
+        return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
+
+    def __str__(self) -> str:
+        return f"{self.data_product_name} data product's {self._name} table in {self._layer} layer"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(name='{self._name}', load_type={self._load_type}, layer={self._layer})"
+
+    def vacuum(self, hours: int = 168, force: bool = False) -> None:
+
+        if hours < 168 and not force:
+            raise ValueError('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
+
+        if hours < 168 and force:
+            spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
+
+        self._DeltaTable.vacuum(retentionHours = hours)
+
+    def zorder(self, columns: list, partition_filter: str = None) -> None:
+
+        if len(columns) == 0:
+            # TODO: recommend columns
+            raise ValueError('Columns must be set')
+
+        if not partition_filter:
+            self._DeltaTable.optimize().executeZOrderBy(*columns)
+        else:
+            self._DeltaTable.optimize().where(partition_filter).executeZOrderBy(*columns)
+
+    def optimize(self, partition_filter: str = None) -> None:
+
+        if not partition_filter:
+            self._DeltaTable.optimize().executeCompaction()
+        else:
+            self._DeltaTable.optimize().where(partition_filter).executeCompaction()
+
+    def history(self, limit: int = 10) -> DataFrame:
+        return self._DeltaTable.history(limit)
     
-    def calculate_enforce_save_target_table_metadata(self, print: bool = False) -> None:
+    def calculate_enforce_save_target_table_metadata(self) -> None:
         """
         Get the target Delta Lake table size in MB and 
         calculate the target file size, enforce it for rewrites and save the result to a json
@@ -669,18 +643,12 @@ class Table(DataProduct):
         Enable autoOptimize and autoCompact for setting the data layout for upcoming writes
         """
 
-        target_file_size = self._target_file_size if self._target_file_size else self.calculate_target_file_size()
-
         # Set the table properties, so that the upcoming writes are using the same target file sizes
         # Effects optimize, zorder, autoopzimite and autocompact
-        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.targetFileSize'='{target_file_size}')") # type: ignore
+        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.targetFileSize'='{self._target_file_size}')") # type: ignore
 
         # Enable autooptimize, so that the later executions will write new files with target_file_size
         spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
-
-        if print:
-            details = self._DeltaTable.detail()
-            print(f"Table properties for {path}: {details.select('properties').collect()[0][0]}") 
    
     def calculate_zorder_and_analyse_columns(self, primary_keys: list[str]) -> tuple[list[str], list[str]]:
         """
@@ -704,14 +672,14 @@ class Table(DataProduct):
             list[str]: list of column names to calculate statistics about other than the Z-ORDERING columns.
         """
 
-        nbr_rows = self.dataframe.count()
+        nbr_rows = self._dataframe.count()
 
         zorder_columns = {}
         analyse_columns = []
 
         for column in primary_keys:
             # Calculate the distinct values in the current column and calculate its ratio over the number of rows
-            nbr_distinct = self.dataframe.agg(F.approx_count_distinct(column).alias('count')).collect()[0][0]
+            nbr_distinct = self._dataframe.agg(F.approx_count_distinct(column).alias('count')).collect()[0][0]
             ratio = nbr_distinct / nbr_rows
 
             # If the ratio is at least 0.01% and has at least 10 distinct values, add it to the possible z-ordering columns
@@ -758,9 +726,9 @@ class Table(DataProduct):
 
             nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
             if alter_statistics_number:
-                spark.sql(f"ALTER TABLE delta.`{self.path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore
+                spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore
 
-            nbr_columns = len(self.dataframe.schema)
+            nbr_columns = len(self._dataframe.schema)
 
             return ','.join(zorder_columns), ','.join(analyse_columns), nbr_column_statistics, nbr_columns
 
@@ -783,7 +751,7 @@ class Table(DataProduct):
         raise NotImplementedError
 
 
-class DataFrame(Table):
+class DataFrame(DataProduct):
     file_format = 'delta'
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None) -> None:
