@@ -1,4 +1,3 @@
-chispa
 delta-spark
 pytest
 pyspark

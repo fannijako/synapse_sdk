@@ -71,9 +71,11 @@ class Utils(object):
             else:
                 yield file
 
+    @staticmethod
     def get_previous_date(days_back: int) -> str:
         return (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
 
+    @staticmethod
     def write_non_distributed_json(content: dict, target_path: str) -> None:
         """
         Writes a json file to abfss as per one file and not as a distributed json object.
