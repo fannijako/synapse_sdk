@@ -1,5 +1,4 @@
 import pytest # type: ignore
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
 
 from  generic_utils import Utils
