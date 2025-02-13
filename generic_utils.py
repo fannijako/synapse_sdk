@@ -85,7 +85,7 @@ class Utils(object):
             target_path (str): abfss:// path to write to
         """
 
-        temp_path = f"/tmp/{target_path.split("/")[-1]}"
+        temp_path = f"/tmp/{target_path.split('/')[-1]}"
         with open(temp_path, 'w') as local_file:
             json.dump(content, local_file)
 
