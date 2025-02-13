@@ -1,5 +1,5 @@
 import pytest # type: ignore
-from  generic_utils import *
+from  generic_utils import PositiveNumber, StringValue
 
 class TestClass:
     number = PositiveNumber()
@@ -11,11 +11,11 @@ def instance():
 
 def test_positive_number_assignment_to_positive_number(instance):
     instance.number = 10
-    assert instance.number == 10
+    assert instance.number == 10, "Positive integer can't be assigned to PositiveNumber."
 
 def test_float_assignment_to_positive_number(instance):
     instance.number = 10.2
-    assert instance.number == 10.2
+    assert instance.number == 10.2, "Positive float can't be assigned to PositiveNumber."
 
 def test_negative_number_assignment_to_positive_number(instance):
     with pytest.raises(ValueError, match="positive number expected"):
@@ -31,7 +31,7 @@ def test_non_numeric_assignment_to_positive_number(instance):
 
 def test_string_assignment_to_string(instance):
     instance.string = 'string'
-    assert instance.string == 'string'
+    assert instance.string == 'string', "String can't be assigned to StringValue."
 
 def test_integer_assignment_to_string(instance):
     with pytest.raises(ValueError, match="string expected"):
