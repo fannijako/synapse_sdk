@@ -9,6 +9,32 @@ from delta.tables import DeltaTable # type: ignore
 from pyspark.sql import DataFrame # type: ignore
 
 
+class PositiveNumber:
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def __get__(self, instance, owner):
+        return instance.__dict__[self._name]
+
+    def __set__(self, instance, value):
+        if not isinstance(value, int | float) or value <= 0:
+            raise ValueError("positive number expected")
+        instance.__dict__[self._name] = value
+
+
+class StringValue:
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def __get__(self, instance, owner):
+        return instance.__dict__[self._name]
+
+    def __set__(self, instance, value):
+        if not isinstance(value, str):
+            raise ValueError("string expected")
+        instance.__dict__[self._name] = value
+
+
 class Utils(object):
     _instance = None
 
@@ -415,6 +441,8 @@ class DataProduct(Notebook):
 
 
 class DataPlaceholder(DataProduct):
+    load_type = StringValue()
+
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
 
         if not isinstance(name, str):
@@ -428,7 +456,7 @@ class DataPlaceholder(DataProduct):
         
         self._name = name
         self._layer = layer
-        self._load_type = load_type
+        self.load_type = load_type
 
         self._path = self._find_path()
 
@@ -441,16 +469,6 @@ class DataPlaceholder(DataProduct):
         if value != self._name:
             raise ValueError(f"Name can't be changed. Create a new instance with (name = {value}, layer = {self._layer}, load_type = {self._load_type}).")
         print("Name is already set to the same value.")
-
-    @property
-    def load_type(self):
-        return self._load_type
-
-    @load_type.setter
-    def load_type(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Value must be a string.")
-        self._load_type = value
 
     @property
     def layer(self):
@@ -486,6 +504,9 @@ class DataPlaceholder(DataProduct):
 
 
 class Table(DataPlaceholder):
+    table_size = PositiveNumber()
+    target_file_size = StringValue()
+
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
         super().__init__(name = name, load_type = load_type, layer = layer)
         self.calculate_table_properties()
@@ -494,8 +515,8 @@ class Table(DataPlaceholder):
         self._DeltaTable = self._get_delta_table()
         self.load_type = self.load_type if self.load_type else self._get_load_type()
         self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
-        self._table_size = self.get_target_table_size()
-        self._target_file_size = self.calculate_target_file_size()
+        self.table_size = self.get_target_table_size()
+        self.target_file_size = self.calculate_target_file_size()
 
     @property
     def DeltaTable(self):
@@ -504,30 +525,6 @@ class Table(DataPlaceholder):
     @DeltaTable.setter
     def DeltaTable(self, value):
         raise ValueError("DeltaTable can't be set manually. Set the name and layer attributes correctly to get the DeltaTable representation.")
-
-    @property
-    def table_size(self):
-        return self._table_size
-
-    @table_size.setter
-    def table_size(self, value):
-        if not isinstance(value, float | int) or value <= 0:
-            raise ValueError("Table size must be a positive number.")
-        
-        print("Consider calculating the table size with the get_target_table_size method instead of manually setting it.")
-        self._table_size = value
-
-    @property
-    def target_file_size(self):
-        return self._target_file_size
-
-    @target_file_size.setter
-    def target_file_size(self, value):
-        if not isinstance(value, str):
-            raise ValueError("target_file_size must be a string")
-        
-        print("Consider calculating the target file size with the calculate_target_file_size method instead of manually setting it.")
-        self._target_file_size = value
 
     @property
     def dataframe(self):
@@ -581,7 +578,7 @@ class Table(DataPlaceholder):
             str: target table size in MB
         """
 
-        target_table_size = self._table_size if self._table_size else self.get_target_table_size()
+        target_table_size = self.table_size if self.table_size else self.get_target_table_size()
         size_in_gb = target_table_size / 1024 / 1024 / 1024
 
         if size_in_gb < 10:
@@ -749,11 +746,11 @@ class Table(DataPlaceholder):
 
 class DataFrame(DataProduct):
     file_format = 'delta'
+    version = PositiveNumber()
+    timestamp = StringValue()
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None):
 
-        if not isinstance(version, int | None) or version <= 0:
-            raise ValueError('Positive number expected for version.')
         if not isinstance(timestamp, str | None):
             raise ValueError('String expected for timestamp.')
         if self.version and self.timestamp:
@@ -762,30 +759,10 @@ class DataFrame(DataProduct):
         super().__init__(name = name, load_type = load_type, layer = layer)
 
         self.latest_version = self.get_version()
-        self._version = version
-        self._timestamp = timestamp
+        self.version = version
+        self.timestamp = timestamp
 
         self.load_dataframe()
-
-    @property
-    def version(self):
-        return self._version
-
-    @version.setter
-    def version(self, value):
-        if not isinstance(value, int) or value <= 0:
-            raise ValueError("Version must be a positive integer.")
-        self._version = value
-
-    @property
-    def timestamp(self):
-        return self._timestamp
-
-    @timestamp.setter
-    def timestamp(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Timestamp must be of type string")
-        self._timestamp = value
 
     def __eq__(self, other_dataframe: DataFrame) -> bool:
 
@@ -1018,19 +995,11 @@ class DataFrame(DataProduct):
 
 
 class KeyVault(Notebook):
+    key_vault_name = StringValue()
+
     def __init__(self):
         super().__init__()
-        self._key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
-
-    @property
-    def key_vault_name(self):
-        return self._key_vault_name
-
-    @key_vault_name.setter
-    def key_vault_name(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Key_vault_name must be of type string.")
-        self._key_vault_name = value
+        self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
 
     def __eq__(self, other_keyvault: KeyVault) -> bool: # type: ignore
         return self.key_vault_name == other_keyvault.key_vault_name
@@ -1046,59 +1015,20 @@ class KeyVault(Notebook):
 
 
 class aSQLDatabase(Notebook):
+    database_name = StringValue()
+    database_schema = StringValue()
+    database_server = StringValue()
+    asql_database_linked_service_name = StringValue()
+
     def __init__(self, database_name: str, database_schema: str):
-        if not isinstance(database_name, str):
-            raise ValueError("Database_name must be of type string.")
-        if not isinstance(database_schema, str):
-            raise ValueError("Database_schema must be of type string.")
 
         super().__init__()
 
-        self._database_name = database_name
-        self._database_schema = database_schema
+        self.database_name = database_name
+        self.database_schema = database_schema
 
-        self._database_server = f'sql-{self.data_product_name}-we-{"nonprod" if self.environment == "d" else "prod"}.database.windows.net:1433'
-        self._asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
-    
-    @property
-    def database_name(self):
-        return self._database_name
-
-    @database_name.setter
-    def database_name(self, value):
-        if not isinstance(value, str):
-            raise ValueError('Database_name must be of type string')
-        self._database_name = value
-
-    @property
-    def database_schema(self):
-        return self._database_schema
-
-    @database_schema.setter
-    def database_schema(self, value):
-        if not isinstance(value, str):
-            raise ValueError('Database_schema must be of type string')
-        self._database_schema = value
-
-    @property
-    def database_server(self):
-        return self._database_server
-
-    @database_server.setter
-    def database_server(self, value):
-        if not isinstance(value, str):
-            raise ValueError('Database_server must be of type string')
-        self._database_server = value
-
-    @property
-    def asql_database_linked_service_name(self):
-        return self._asql_database_linked_service_name
-
-    @asql_database_linked_service_name.setter
-    def _asql_database_linked_service_name(self, value):
-        if not isinstance(value, str):
-            raise ValueError('_asql_database_linked_service_name must be of type string')
-        self._asql_database_linked_service_name = value
+        self.database_server = f'sql-{self.data_product_name}-we-{"nonprod" if self.environment == "d" else "prod"}.database.windows.net:1433'
+        self.asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
 
     def __eq__(self, other_database: aSQLDatabase) -> bool:  # type: ignore
 
