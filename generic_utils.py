@@ -481,6 +481,9 @@ class DataPlaceholder(DataProduct):
 
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
+    def __eq__(self, other_table: Table) -> bool: # type: ignore
+        return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
+
 
 class Table(DataPlaceholder):
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
@@ -592,9 +595,6 @@ class Table(DataPlaceholder):
 
         self._target_file_size = target_file_size
         return target_file_size
-
-    def __eq__(self, other_table: Table) -> bool: # type: ignore
-        return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
 
     def __str__(self) -> str:
         return f"{self.data_product_name} data product's {self._name} table in {self._layer} layer"
@@ -739,8 +739,6 @@ class Table(DataPlaceholder):
         Using the previous methods
         """
         raise NotImplementedError
-
-        raise NotImplementedError
     
     def get_optimization_recommendations(self):
         """
@@ -754,23 +752,14 @@ class DataFrame(DataProduct):
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None):
 
-        if not isinstance(name, str):
-            raise ValueError('String expected for name.')
-        if layer not in ['curated', 'trusted']:
-            raise ValueError('Layer must be curated or trusted.')
-        if not isinstance(load_type, str | None):
-            raise ValueError('String expected for load_type.')
         if not isinstance(version, int | None) or version <= 0:
             raise ValueError('Positive number expected for version.')
         if not isinstance(timestamp, str | None):
             raise ValueError('String expected for timestamp.')
+        if self.version and self.timestamp:
+            raise ValueError("Can't set both version and timestamp")
 
-        super().__init__()
-
-        self._name = name
-        self._load_type = load_type
-        self._layer = layer
-        self._path = self._find_path()
+        super().__init__(name = name, load_type = load_type, layer = layer)
 
         self.latest_version = self.get_version()
         self._version = version
@@ -778,78 +767,26 @@ class DataFrame(DataProduct):
 
         self.load_dataframe()
 
-    def _find_path(self) -> Tuple[str, str, str]:
-        if self.name in self.curated_tables and self.layer == 'curated':
-            return self.curated_tables.get(self._name)
-
-        if self.name in self.trusted_tables and self.layer == 'trusted':
-            return self.trusted_path.get(self._name)
-
-        raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        if value != self._name:
-            raise ValueError(f"Name can't be changed. Create a new instance with DataFrame(name = {value}, load_type = {self._load_type}, layer = {self._layer}, version = {self._version}, timestamp = {self._timestamp}).")
-        print("Name is already set to the same value.")
-
-    @property
-    def layer(self):
-        return self._layer
-
-    @layer.setter
-    def layer(self, value):
-        if value not in ['curated', 'trusted']:
-            raise ValueError('Layer must be curated or trusted.')
-        if value == self._layer:
-            print("Layer is already set to the same value.")
-            return
-
-        old_layer = self._layer
-        self._layer = value
-
-        try:
-            self._path = self._find_path()
-        except ValueError:
-            self._layer = old_layer
-            self._path = self._find_path()
-            raise ValueError(f'Delta table with name {self._name} does not exist in the {self._layer} layer.')
-
-        self.calculate_table_properties()
-
-    @property
-    def load_type(self):
-        return self._load_type
-
-    @load_type.setter
-    def load_type(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Value must be a string.")
-        self._load_type = value
-
-    @property
-    def path(self):
-        return self._path
-
-    @path.setter
-    def path(self, value):
-        if value != self._path:
-            raise ValueError("Path can't be set manually. Set the name and layer attributes correctly to get the path.")
-        print("Path is already set to the same value.")
-
-
     @property
     def version(self):
         return self._version
 
     @version.setter
     def version(self, value):
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("Version must be a positive integer.")
         self._version = value
-    
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Timestamp must be of type string")
+        self._timestamp = value
+
     def __eq__(self, other_dataframe: DataFrame) -> bool:
 
         same_super = self.super() == other_dataframe.super()
@@ -891,8 +828,6 @@ class DataFrame(DataProduct):
         return f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, layer={self.layer}, version={self.version}, timestamp={self.timestamp})"
 
     def load_dataframe(self) -> None:
-        if self.version and self.timestamp:
-            raise ValueError("Can't set both version and timestamp")
         if not self.version and not self.timestamp:
             self.dataframe = spark.read.format('delta').load(self.path) # type: ignore
         elif self.version:
@@ -1083,10 +1018,20 @@ class DataFrame(DataProduct):
 
 
 class KeyVault(Notebook):
-    def __init__(self) -> None:
+    def __init__(self):
         super().__init__()
-        self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
-    
+        self._key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
+
+    @property
+    def key_vault_name(self):
+        return self._key_vault_name
+
+    @key_vault_name.setter
+    def key_vault_name(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Key_vault_name must be of type string.")
+        self._key_vault_name = value
+
     def __eq__(self, other_keyvault: KeyVault) -> bool: # type: ignore
         return self.key_vault_name == other_keyvault.key_vault_name
 
@@ -1101,13 +1046,60 @@ class KeyVault(Notebook):
 
 
 class aSQLDatabase(Notebook):
-    def __init__(self, database_name: str, database_schema: str) -> None:
+    def __init__(self, database_name: str, database_schema: str):
+        if not isinstance(database_name, str):
+            raise ValueError("Database_name must be of type string.")
+        if not isinstance(database_schema, str):
+            raise ValueError("Database_schema must be of type string.")
+
         super().__init__()
-        self.database_server = f'sql-{self.data_product_name}-we-{"nonprod" if self.environment == "d" else "prod"}.database.windows.net:1433'
-        self.database_name = database_name
-        self.database_schema = database_schema
-        self.asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
+
+        self._database_name = database_name
+        self._database_schema = database_schema
+
+        self._database_server = f'sql-{self.data_product_name}-we-{"nonprod" if self.environment == "d" else "prod"}.database.windows.net:1433'
+        self._asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
     
+    @property
+    def database_name(self):
+        return self._database_name
+
+    @database_name.setter
+    def database_name(self, value):
+        if not isinstance(value, str):
+            raise ValueError('Database_name must be of type string')
+        self._database_name = value
+
+    @property
+    def database_schema(self):
+        return self._database_schema
+
+    @database_schema.setter
+    def database_schema(self, value):
+        if not isinstance(value, str):
+            raise ValueError('Database_schema must be of type string')
+        self._database_schema = value
+
+    @property
+    def database_server(self):
+        return self._database_server
+
+    @database_server.setter
+    def database_server(self, value):
+        if not isinstance(value, str):
+            raise ValueError('Database_server must be of type string')
+        self._database_server = value
+
+    @property
+    def asql_database_linked_service_name(self):
+        return self._asql_database_linked_service_name
+
+    @asql_database_linked_service_name.setter
+    def _asql_database_linked_service_name(self, value):
+        if not isinstance(value, str):
+            raise ValueError('_asql_database_linked_service_name must be of type string')
+        self._asql_database_linked_service_name = value
+
     def __eq__(self, other_database: aSQLDatabase) -> bool:  # type: ignore
 
         same_database_server = self.database_server == other_database.database_server
