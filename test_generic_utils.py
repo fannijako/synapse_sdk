@@ -23,3 +23,13 @@ def test_zero_assignment(instance):
 def test_non_numeric_assignment(instance):
     with pytest.raises(ValueError, match="positive number expected"):
         instance.number = "string"
+
+class TestClass:
+    string = StringValue()
+
+@pytest.fixture
+def instance():
+    return StringValue()
+
+def test_string_assignment(instance):
+    instance.string = 'string'
