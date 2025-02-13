@@ -1,3 +1,7 @@
+pip install -r requirements.txt
+
+pytest
+
 git clone # TODO: tics repo - branch megadással
 
 cd tics_repo
