@@ -271,7 +271,7 @@ class Notebook(Utils):
                              Set the data_product_name, environment and data_product_version attributes
                              and the trusted_path attribute will be set accordingly.""")
 
-    def __eq__(self, other_notebook: Notebook) -> bool: # type: ignore
+    def __eq__(self, other_notebook) -> bool:
 
         same_workspace_name = self._workspace_name == other_notebook.workspace_name
         same_job_id = self.job_id == other_notebook.job_id
@@ -339,7 +339,7 @@ class DataProduct(Notebook):
         self.curated_tables = self.list_tables_in_curated()
         self.trusted_tables = self.list_tables_in_trusted()
 
-    def __eq__(self, other_data_product: DataProduct) -> bool: # type: ignore
+    def __eq__(self, other_data_product) -> bool:
         return self.azure_storage_name == other_data_product.azure_storage_name
 
     def __contains__(self, table: str) -> bool:
@@ -462,7 +462,7 @@ class DataPlaceholder(DataProduct):
 
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
-    def __eq__(self, other_table: Table) -> bool: # type: ignore
+    def __eq__(self, other_table) -> bool:
         return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
 
 
@@ -719,7 +719,7 @@ class DataFrame(DataProduct):
 
         self.load_dataframe()
 
-    def __eq__(self, other_dataframe: DataFrame) -> bool:
+    def __eq__(self, other_dataframe) -> bool:
 
         same_super = self.super() == other_dataframe.super()
         same_version = self.version == other_dataframe.version
@@ -956,7 +956,7 @@ class KeyVault(Notebook):
         super().__init__()
         self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
 
-    def __eq__(self, other_keyvault: KeyVault) -> bool: # type: ignore
+    def __eq__(self, other_keyvault) -> bool:
         return self.key_vault_name == other_keyvault.key_vault_name
 
     def __str__(self) -> str:
@@ -985,7 +985,7 @@ class aSQLDatabase(Notebook):
         self.database_server = f'sql-{self.data_product_name}-we-{"nonprod" if self.environment == "d" else "prod"}.database.windows.net:1433'
         self.asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
 
-    def __eq__(self, other_database: aSQLDatabase) -> bool:  # type: ignore
+    def __eq__(self, other_database) -> bool:
 
         same_database_server = self.database_server == other_database.database_server
         same_database_name = self.database_name == other_database.database_name
