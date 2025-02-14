@@ -36,7 +36,10 @@ def read_py_file(py_file_name: str = "generic_utils.py"):
     code = []
     with open(py_file_name, "r") as py_file:
         for line in py_file:
-            code.append(line)
+            if line.startswith('from generic_utils import ') or line.startswith('import generic_utils'):
+                code.append('%run /generic_utils')
+            else:
+                code.append(line)
     return code
 
 

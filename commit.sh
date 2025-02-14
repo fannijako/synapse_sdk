@@ -17,7 +17,7 @@ NOTEBOOK_GENERATION_SCRIPT="generate_notebook.py"
 REPOSITORY_NAME=$(basename "$REPOSITORY_URL")
 JSON_FILES=("${FILES[@]/.py/.json}")
 
-scho "Virtual environment creation and activation started..."
+echo "Virtual environment creation and activation started..."
 
 $PYTHON_VERSION -m venv ".venv"
 source .venv/bin/activate
