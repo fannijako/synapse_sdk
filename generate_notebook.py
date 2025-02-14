@@ -31,6 +31,8 @@ def read_py_file(py_file_name: str = "generic_utils.py"):
         for line in py_file:
             if line.startswith('from generic_utils import ') or line.startswith('import generic_utils'):
                 code.append('%run /generic_utils')
+            elif line.startswith('import mssparkutils'):
+                pass
             else:
                 code.append(line)
     return code
