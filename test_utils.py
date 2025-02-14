@@ -1,7 +1,13 @@
 import pytest # type: ignore
+import sys
+
+from unittest.mock import MagicMock
 from datetime import datetime, timedelta
 
+sys.modules["mssparkutils"] = MagicMock()
+
 from  generic_utils import Utils
+
 
 @pytest.fixture
 def utils_instance():
