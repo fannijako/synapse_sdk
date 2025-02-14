@@ -1,5 +1,8 @@
-import pytest
+import pytest  # type: ignore
+import sys
 from unittest.mock import MagicMock, patch
+
+sys.modules["mssparkutils"] = MagicMock()
 
 from generic_utils import Notebook
 
@@ -16,7 +19,7 @@ def mock_mssparkutils():
     mock.env.getClusterId.return_value = "cluster123"
     return mock
 
-@patch('notebook.mssparkutils', new_callable=MagicMock)
+@patch('generic_utils.mssparkutils', new_callable=MagicMock)
 def test_notebook_initialization(mock_mssparkutils, mock_mssparkutils_fixture):
     mock_mssparkutils.configure_mock(**vars(mock_mssparkutils_fixture))
 
@@ -32,14 +35,11 @@ def test_notebook_initialization(mock_mssparkutils, mock_mssparkutils_fixture):
     assert notebook._pool == "pool123"
     assert notebook._cluster == "cluster123"
 
-    # Test that _construct_paths was called
-    # You might need to add more specific assertions depending on what _construct_paths does
-
 @pytest.mark.parametrize("workspace_name, expected", [
     ("ws-product1-dev-v1", ("product1", "dev", "v1")),
     ("ws-product2-prod-v2", ("product2", "prod", "v2")),
 ])
-@patch('notebook.mssparkutils', new_callable=MagicMock)
+@patch('generic_utils.mssparkutils', new_callable=MagicMock)
 def test_workspace_name_parsing(mock_mssparkutils, workspace_name, expected):
     mock_mssparkutils.env.getWorkspaceName.return_value = workspace_name
     
@@ -52,5 +52,3 @@ def test_workspace_name_parsing(mock_mssparkutils, workspace_name, expected):
 def test_exit_values_initialization():
     notebook = Notebook()
     assert notebook.exit_values == {}
-
-# Add more tests as needed for other methods in the Notebook class
