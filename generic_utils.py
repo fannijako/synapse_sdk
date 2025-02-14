@@ -4,6 +4,7 @@ import mssparkutils # type: ignore
 import pyspark.sql.functions as F # type: ignore
 
 from datetime import datetime, timedelta
+from functools import cached_property
 from typing import Iterator, Tuple, Union
 
 from delta.tables import DeltaTable # type: ignore
@@ -97,18 +98,42 @@ class Notebook(Utils):
     exit_values = {}
 
     def __init__(self):
-        self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
+        self._workpsace_name = self._get_workpsace_name()
         _, self._data_product_name, self._environment, self._data_product_version = self._workspace_name.split('-')
         self._construct_paths()
 
-        self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        self._notebook_name = self._get_notebook_name()
         
-        self._job_id = mssparkutils.env.getJobId() # type: ignore
-        self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
-        self._pool = mssparkutils.env.getPoolName() # type: ignore
-        self._cluster = mssparkutils.env.getClusterId() # type: ignore
+        self._job_id = self._get_job_id()
+        self._pipeline_job_id = self._get_pipeline_job_id()
+        self._pool = self._get_pool()
+        self._cluster = self._get_cluster()
 
         self.set_spark_datetime_settings()
+
+    @cached_property
+    def _get_workpsace_name(self):
+        return mssparkutils.env.getWorkspaceName() # type: ignore
+
+    @cached_property
+    def _get_notebook_name(self):
+        return mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+
+    @cached_property
+    def _get_job_id(self):
+        return mssparkutils.env.getJobId() # type: ignore
+
+    @cached_property
+    def _get_pipeline_job_id(self):
+        return mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+
+    @cached_property
+    def _get_pool(self):
+        return mssparkutils.env.getPoolName() # type: ignore
+
+    @cached_property
+    def _get_cluster(self):
+        return mssparkutils.env.getClusterId() # type: ignore
 
     @property
     def workspace_name(self):
@@ -376,9 +401,11 @@ class DataProduct(Notebook):
         }
 
 
+    @cached_property
     def list_tables_in_curated(self) -> dict:
         return self.get_all_deltas([self._standardized_curated_path, self._sensitive_standardized_curated_path])
-    
+
+    @cached_property
     def list_tables_in_trusted(self) -> dict:
         return self.get_all_deltas([self._trusted_path], max_depth = 4)
 
@@ -433,8 +460,6 @@ class DataPlaceholder(DataProduct):
             raise TypeError('String expected for name.')
         if layer not in ['curated', 'trusted']:
             raise ValueError('Layer must be curated or trusted.')
-        if not isinstance(load_type, str | None):
-            raise TypeError('String expected for load_type.')
 
         super().__init__()
         
