@@ -2,18 +2,22 @@
 
 set -e
 
+# Variables that needs to be customized for the use case
 REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DAP-TISC/_git/lhtdap-tisc-syn"
 BRANCH_NAME="fj/ahornboden/modularized_generic"
-
-TEST_FILES=("generic_utils.py" "test_descriptor.py" "test_notebook.py" "test_utils.py" "vacuum_notebook.py")
-
 COMMIT_MESSAGE="automatically commited by commit.sh"
 
+FILES=("generic_utils.py" "vacuum_notebook.py")
+
+# Additional variables
 PYTHON_VERSION="python3"
 NOTEBOOK_GENERATION_SCRIPT="generate_notebook.py"
 
+# Generated variables
 REPOSITORY_NAME=$(basename "$REPOSITORY_URL")
-JSON_FILES=("${TEST_FILES[@]/.py/.json}")
+JSON_FILES=("${FILES[@]/.py/.json}")
+
+scho "Virtual environment creation and activation started..."
 
 $PYTHON_VERSION -m venv ".venv"
 source .venv/bin/activate
@@ -25,9 +29,7 @@ pip install -r requirements.txt
 
 echo "Requirements installed for the tests. Starting the pytests..."
 
-pytest test_descriptor.py || exit 1
-pytest test_utils.py || exit 1
-# pytest test_notebook.py || exit 1  # TODO: make this executable locally (spark mock)
+pytest || exit 1
 
 echo "All tests passed. Deactivating virtual environment..."
 
@@ -35,7 +37,7 @@ deactivate
 
 echo "Virtual environment deactivated. Starting the .py to .json conversions..."
 
-for file in "${TEST_FILES[@]}"; do
+for file in "${FILES[@]}"; do
     $PYTHON_VERSION $NOTEBOOK_GENERATION_SCRIPT "$file"
 done
 
