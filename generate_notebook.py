@@ -21,13 +21,6 @@ notebook_outline_dict = {
 			"sessionKeepAliveTimeout": 30
 		},
 		"cells": [
-			{
-				"cell_type": "code",
-				"source": [
-                    ""
-				],
-				"execution_count": None
-			}
 		]
 	}
 }
@@ -43,9 +36,37 @@ def read_py_file(py_file_name: str = "generic_utils.py"):
     return code
 
 
+def split_magic_commands(code: list) -> list:
+
+    splitted_code = []
+    current_block = []
+
+    for item in code:
+        if item == '%run /generic_utils':
+            if current_block:
+                splitted_code.append(current_block)
+                current_block = []
+            splitted_code.append([item])
+        else:
+            current_block.append(item)
+
+    if current_block:
+        splitted_code.append(current_block)
+
+    return splitted_code
+
+
 def add_code_to_notebook_outline(notebook_outline_dict: dict, code: list):
-    notebook_outline_dict["properties"]["cells"][0]["source"].extend(code)
-    notebook_outline_dict["properties"]["cells"][0]["source"].pop(0)
+
+    for code_block in split_magic_commands(code):
+        notebook_outline_dict["properties"]["cells"].append(
+        {
+				"cell_type": "code",
+				"source": code_block,
+				"execution_count": None
+			}
+        )
+
     return notebook_outline_dict
 
 
