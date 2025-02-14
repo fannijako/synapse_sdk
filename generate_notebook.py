@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 
@@ -60,6 +61,10 @@ def main(py_file_name: str = "generic_utils.py", folder: str = "notebook"):
 
 
 if __name__ == '__main__':
-    py_file_name = input("Py file name to convert (e.g. generic_utils.py): ")
-    folder = input("Subfolder to place the result to (recommended: notebook): ")
-    main(py_file_name = py_file_name, folder = folder)
+    parser = argparse.ArgumentParser(description='Convert Python file to notebook format')
+    parser.add_argument('py_file_name', type=str, help='Python file name to convert (e.g. generic_utils.py)')
+    parser.add_argument('folder', type=str, help='Subfolder to place the result to (recommended: notebook)')
+    
+    args = parser.parse_args()
+    main(py_file_name = args.py_file_name, folder = args.folder)
+ 
