@@ -10,7 +10,7 @@ notebook_outline_dict = {
 		"nbformat_minor": 2,
 		"metadata": {
 			"saveOutput": True,
-			"enableDebugMode": False,
+			"enableDebugMode": True,
 			"kernelspec": {
 				"name": "synapse_pyspark",
 				"display_name": "Synapse PySpark"
@@ -59,6 +59,12 @@ def split_magic_commands(code: list) -> list:
 def add_code_to_notebook_outline(notebook_outline_dict: dict, code: list):
 
     for code_block in split_magic_commands(code):
+
+        if code_block[0] in ["\n", ""]:
+            code_block = code_block[1:]
+        if code_block[-1] in  ["\n", ""]:
+            code_block = code_block[:-1]
+
         notebook_outline_dict["properties"]["cells"].append(
         {
 				"cell_type": "code",
