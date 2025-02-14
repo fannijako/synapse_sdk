@@ -1,4 +1,9 @@
 import pytest # type: ignore
+import sys
+from unittest.mock import MagicMock, patch
+
+sys.modules["mssparkutils"] = MagicMock()
+
 from  generic_utils import PositiveNumber, StringValue
 
 class TestClass:
