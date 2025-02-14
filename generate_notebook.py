@@ -62,8 +62,16 @@ def main(py_file_name: str = "generic_utils.py", folder: str = "notebook"):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert Python file to notebook format')
-    parser.add_argument('py_file_name', type=str, help='Python file name to convert (e.g. generic_utils.py)')
-    parser.add_argument('folder', type=str, help='Subfolder to place the result to (recommended: notebook)')
+    parser.add_argument('py_file_name',
+                        type = str,
+                        nargs = '?',
+                        default = 'generic_utils.py',
+                        help = 'Python file name to convert (e.g. generic_utils.py)')
+    parser.add_argument('folder',
+                        type = str,
+                        nargs = '?',
+                        default='notebook',
+                        help = 'Subfolder to place the result to (recommended: notebook)')
     
     args = parser.parse_args()
     main(py_file_name = args.py_file_name, folder = args.folder)
