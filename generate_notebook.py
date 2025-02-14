@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 
@@ -9,7 +10,7 @@ notebook_outline_dict = {
 		"nbformat_minor": 2,
 		"metadata": {
 			"saveOutput": True,
-			"enableDebugMode": False,
+			"enableDebugMode": True,
 			"kernelspec": {
 				"name": "synapse_pyspark",
 				"display_name": "Synapse PySpark"
@@ -20,13 +21,6 @@ notebook_outline_dict = {
 			"sessionKeepAliveTimeout": 30
 		},
 		"cells": [
-			{
-				"cell_type": "code",
-				"source": [
-                    ""
-				],
-				"execution_count": None
-			}
 		]
 	}
 }
@@ -35,13 +29,50 @@ def read_py_file(py_file_name: str = "generic_utils.py"):
     code = []
     with open(py_file_name, "r") as py_file:
         for line in py_file:
-            code.append(line)
+            if line.startswith('from generic_utils import ') or line.startswith('import generic_utils'):
+                code.append('%run /generic_utils')
+            else:
+                code.append(line)
     return code
 
 
+def split_magic_commands(code: list) -> list:
+
+    splitted_code = []
+    current_block = []
+
+    for item in code:
+        if item == '%run /generic_utils':
+            if current_block:
+                splitted_code.append(current_block)
+                current_block = []
+            splitted_code.append([item])
+        else:
+            current_block.append(item)
+
+    if current_block:
+        splitted_code.append(current_block)
+
+    return splitted_code
+
+
 def add_code_to_notebook_outline(notebook_outline_dict: dict, code: list):
-    notebook_outline_dict["properties"]["cells"][0]["source"].extend(code)
-    notebook_outline_dict["properties"]["cells"][0]["source"].pop(0)
+
+    for code_block in split_magic_commands(code):
+
+        if code_block[0] in ["\n", ""]:
+            code_block = code_block[1:]
+        if code_block[-1] in  ["\n", ""]:
+            code_block = code_block[:-1]
+
+        notebook_outline_dict["properties"]["cells"].append(
+        {
+				"cell_type": "code",
+				"source": code_block,
+				"execution_count": None
+			}
+        )
+
     return notebook_outline_dict
 
 
@@ -60,6 +91,18 @@ def main(py_file_name: str = "generic_utils.py", folder: str = "notebook"):
 
 
 if __name__ == '__main__':
-    py_file_name = input("Py file name to convert (e.g. generic_utils.py): ")
-    folder = input("Subfolder to place the result to (recommended: notebook): ")
-    main(py_file_name = py_file_name, folder = folder)
+    parser = argparse.ArgumentParser(description='Convert Python file to notebook format')
+    parser.add_argument('py_file_name',
+                        type = str,
+                        nargs = '?',
+                        default = 'generic_utils.py',
+                        help = 'Python file name to convert (e.g. generic_utils.py)')
+    parser.add_argument('folder',
+                        type = str,
+                        nargs = '?',
+                        default='notebook',
+                        help = 'Subfolder to place the result to (recommended: notebook)')
+    
+    args = parser.parse_args()
+    main(py_file_name = args.py_file_name, folder = args.folder)
+ 

@@ -1,8 +1,10 @@
 import json
 
+import mssparkutils # type: ignore
 import pyspark.sql.functions as F # type: ignore
 
 from datetime import datetime, timedelta
+from functools import cached_property
 from typing import Iterator, Tuple, Union
 
 from delta.tables import DeltaTable # type: ignore
@@ -18,7 +20,7 @@ class PositiveNumber:
 
     def __set__(self, instance, value):
         if not isinstance(value, int | float) or value <= 0:
-            raise ValueError("positive number expected")
+            raise TypeError("positive number expected")
         instance.__dict__[self._name] = value
 
 
@@ -31,7 +33,7 @@ class StringValue:
 
     def __set__(self, instance, value):
         if not isinstance(value, str):
-            raise ValueError("string expected")
+            raise TypeError("string expected")
         instance.__dict__[self._name] = value
 
 
@@ -85,7 +87,7 @@ class Utils(object):
             target_path (str): abfss:// path to write to
         """
 
-        temp_path = f"/tmp/{target_path.split("/")[-1]}"
+        temp_path = f"/tmp/{target_path.split('/')[-1]}"
         with open(temp_path, 'w') as local_file:
             json.dump(content, local_file)
 
@@ -96,18 +98,42 @@ class Notebook(Utils):
     exit_values = {}
 
     def __init__(self):
-        self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
+        self._workpsace_name = self._get_workpsace_name()
         _, self._data_product_name, self._environment, self._data_product_version = self._workspace_name.split('-')
         self._construct_paths()
 
-        self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        self._notebook_name = self._get_notebook_name()
         
-        self._job_id = mssparkutils.env.getJobId() # type: ignore
-        self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
-        self._pool = mssparkutils.env.getPoolName() # type: ignore
-        self._cluster = mssparkutils.env.getClusterId() # type: ignore
+        self._job_id = self._get_job_id()
+        self._pipeline_job_id = self._get_pipeline_job_id()
+        self._pool = self._get_pool()
+        self._cluster = self._get_cluster()
 
         self.set_spark_datetime_settings()
+
+    @cached_property
+    def _get_workpsace_name(self):
+        return mssparkutils.env.getWorkspaceName() # type: ignore
+
+    @cached_property
+    def _get_notebook_name(self):
+        return mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+
+    @cached_property
+    def _get_job_id(self):
+        return mssparkutils.env.getJobId() # type: ignore
+
+    @cached_property
+    def _get_pipeline_job_id(self):
+        return mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+
+    @cached_property
+    def _get_pool(self):
+        return mssparkutils.env.getPoolName() # type: ignore
+
+    @cached_property
+    def _get_cluster(self):
+        return mssparkutils.env.getClusterId() # type: ignore
 
     @property
     def workspace_name(self):
@@ -115,7 +141,7 @@ class Notebook(Utils):
 
     @workspace_name.setter
     def workspace_name(self, value):
-        raise ValueError(f"""Workspace_name can't be changed to {value}. Workspace name is extraced using the mssparkutils library.
+        raise UserWarning(f"""Workspace_name can't be changed to {value}. Workspace name is extraced using the mssparkutils library.
                              You can manually change the data_product_name, environment and data_product_version attributes
                              if you would like to work with data from a different data product or environment.
                           """)
@@ -127,7 +153,7 @@ class Notebook(Utils):
     @data_product_name.setter
     def data_product_name(self, value):
         if not isinstance(value, str):
-            raise ValueError("Data_product_name attribute must be a string.")
+            raise TypeError("Data_product_name attribute must be a string.")
 
         if value != self._data_product_name:
             print(f"""Data product name is by default extracted from the workspace name ({self._workspace_name}).
@@ -179,7 +205,7 @@ class Notebook(Utils):
     @data_product_version.setter
     def data_product_version(self, value):
         if not isinstance(value, str) or len(value) != 3:
-            raise ValueError("data_product_version attribute needs to be a 3 character long string.")
+            raise TypeError("data_product_version attribute needs to be a 3 character long string.")
 
         if value == self._data_product_version:
             print("Data_product_version attribute is already set to the same value.")
@@ -229,7 +255,7 @@ class Notebook(Utils):
 
     @azure_storage_name.setter
     def azure_storage_name(self, value):
-        raise ValueError(f"""Azure_storage_name can't be changed manually to {value}.
+        raise UserWarning(f"""Azure_storage_name can't be changed manually to {value}.
                              Set the data_product_name, environment and data_product_version attributes
                              and the storage_account_name attribute will be set accordingly.""")
 
@@ -239,7 +265,7 @@ class Notebook(Utils):
 
     @curated_path.setter
     def curated_path(self, value):
-        raise ValueError(f"""Curated_path can't be changed manually to {value}.
+        raise UserWarning(f"""Curated_path can't be changed manually to {value}.
                              Set the data_product_name, environment and data_product_version attributes
                              and the curated_path attribute will be set accordingly.""")
 
@@ -249,7 +275,7 @@ class Notebook(Utils):
 
     @standardized_curated_path.setter
     def standardized_curated_path(self, value):
-        raise ValueError(f"""Standardized_curated_path can't be changed manually to {value}.
+        raise UserWarning(f"""Standardized_curated_path can't be changed manually to {value}.
                              Set the data_product_name, environment and data_product_version attributes
                              and the standardized_curated_path attribute will be set accordingly.""")
 
@@ -259,7 +285,7 @@ class Notebook(Utils):
 
     @sensitive_standardized_curated_path.setter
     def sensitive_standardized_curated_path(self, value):
-        raise ValueError(f"""Sensitive_standardized_curated_path can't be changed manually to {value}.
+        raise UserWarning(f"""Sensitive_standardized_curated_path can't be changed manually to {value}.
                              Set the data_product_name, environment and data_product_version attributes
                              and the sensitive_standardized_curated_path attribute will be set accordingly.""")
 
@@ -269,7 +295,7 @@ class Notebook(Utils):
 
     @trusted_path.setter
     def trusted_path(self, value):
-        raise ValueError(f"""Trusted_path can't be changed manually to {value}.
+        raise UserWarning(f"""Trusted_path can't be changed manually to {value}.
                              Set the data_product_name, environment and data_product_version attributes
                              and the trusted_path attribute will be set accordingly.""")
 
@@ -309,7 +335,7 @@ class Notebook(Utils):
         """
 
         if not isinstance(value, str | list):
-            raise ValueError('value must be of type string or list')
+            raise TypeError('value must be of type string or list')
 
         if key not in cls.exit_values.keys():
             cls.exit_values[key] = value
@@ -375,9 +401,11 @@ class DataProduct(Notebook):
         }
 
 
+    @cached_property
     def list_tables_in_curated(self) -> dict:
         return self.get_all_deltas([self._standardized_curated_path, self._sensitive_standardized_curated_path])
-    
+
+    @cached_property
     def list_tables_in_trusted(self) -> dict:
         return self.get_all_deltas([self._trusted_path], max_depth = 4)
 
@@ -429,11 +457,9 @@ class DataPlaceholder(DataProduct):
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
 
         if not isinstance(name, str):
-            raise ValueError('String expected for name.')
+            raise TypeError('String expected for name.')
         if layer not in ['curated', 'trusted']:
             raise ValueError('Layer must be curated or trusted.')
-        if not isinstance(load_type, str | None):
-            raise ValueError('String expected for load_type.')
 
         super().__init__()
         
@@ -559,7 +585,7 @@ class Table(DataPlaceholder):
     def vacuum(self, hours: int = 168, force: bool = False) -> None:
 
         if hours < 168 and not force:
-            raise ValueError('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
+            raise UserWarning('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
 
         if hours < 168 and force:
             spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
@@ -709,7 +735,7 @@ class DataFrame(DataProduct):
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None):
 
         if not isinstance(timestamp, str | None):
-            raise ValueError('String expected for timestamp.')
+            raise TypeError('String expected for timestamp.')
         if self.version and self.timestamp:
             raise ValueError("Can't set both version and timestamp")
 
