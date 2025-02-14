@@ -12,11 +12,24 @@ Follow the input instructions in the terminal to specify which file you would li
 
 ## Commit the generated Synapse notebook ARM template to Azure DevOps
 
-```
-commit_to_data_product.sh
-```
-
 Run the shell script to generate the notebook template and commit to a data product's Azure DevOps repository.
+
+Customize the variables in the commit.sh
+
+- TEST_FILES=("generic_utils.py" "test_descriptor.py" "test_notebook.py" "test_utils.py" "vacuum_notebook.py")
+    - py files to convert to notebook and commit
+- REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DAP-TISC/_git/lhtdap-tisc-syn"
+    - repository url to commit to
+- BRANCH_NAME="fj/ahornboden/modularized_generic"
+    - branch name within the repository (either existing or non-existing)
+- COMMIT_MESSAGE="automatically commited by commit.sh"
+    - commit message to use
+
+Run the script:
+
+```
+source ./commit.sh
+```
 
 ## Generic_utils
 
