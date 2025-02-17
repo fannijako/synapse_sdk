@@ -29,7 +29,8 @@ pip install -r requirements.txt
 
 echo "Requirements installed for the tests. Starting the pytests..."
 
-pytest || exit 1
+pytest test_descriptor.py || exit 1
+pytest test_utils.py || exit 1
 
 echo "All tests passed. Deactivating virtual environment..."
 
