@@ -356,8 +356,8 @@ class Notebook(Utils):
 class DataProduct(Notebook):
     def __init__(self):
         super().__init__()
-        _ = self.curated_tables()
-        _ = self.trusted_tables()
+        _ = self.curated_tables
+        _ = self.trusted_tables
 
     def __eq__(self, other_data_product) -> bool:
         return self.azure_storage_name == other_data_product.azure_storage_name
