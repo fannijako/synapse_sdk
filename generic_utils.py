@@ -325,7 +325,7 @@ class Notebook(Utils):
         """
         Exit the notebook with the previously set exit values
         """
-        mssparkutils.notebook.exit(json.dumps(cls.exit_values)) # type: ignore
+        mssparkutils.notebook.exit(json.dumps(self.exit_values)) # type: ignore
 
 
 class DataProduct(Notebook):
