@@ -95,25 +95,23 @@ class Notebook(Utils):
 
     def __init__(self):
         super().__init__()
-        self._workspace_name = self._get_workspace_name()
+
+        self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
         _, self._data_product_name, self._environment, self._data_product_version = self.workspace_name.split('-')
         self._construct_paths()
 
-        _ = self.notebook_name
+        self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
         
-        _ = self.job_id
-        _ = self.pipeline_job_id
-        _ = self.pool
-        _ = self.cluster
+        self._job_id = mssparkutils.env.getJobId() # type: ignore
+        self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+        self._pool = mssparkutils.env.getPoolName() # type: ignore
+        self._cluster = mssparkutils.env.getClusterId() # type: ignore
 
         self.set_spark_datetime_settings()
 
-    @cached_property
+    @property
     def workspace_name(self):
         return self._workspace_name
-
-    def _get_workspace_name(self):
-        return mssparkutils.env.getWorkspaceName() # type: ignore
 
     @property
     def data_product_name(self):
@@ -248,25 +246,25 @@ class Notebook(Utils):
                              Set the data_product_name, environment and data_product_version attributes
                              and the trusted_path attribute will be set accordingly.""")
 
-    @cached_property
+    @property
     def notebook_name(self):
-        return mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        return self._notebook_name
 
-    @cached_property
+    @property
     def job_id(self):
-        return mssparkutils.env.getJobId() # type: ignore
+        return self._job_id
 
-    @cached_property
+    @property
     def pipeline_job_id(self):
-        return mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+        return self._pipeline_job_id
 
-    @cached_property
+    @property
     def pool(self):
-        return mssparkutils.env.getPoolName() # type: ignore
+        return self._pool
 
-    @cached_property
+    @property
     def cluster(self):
-        return mssparkutils.env.getClusterId() # type: ignore
+        return self._cluster
 
     def __eq__(self, other_notebook) -> bool:
 
