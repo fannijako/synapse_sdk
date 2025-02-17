@@ -354,13 +354,16 @@ class DataProduct(Notebook):
             E.g. {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/standardized/sap/x04_slt/test_table.delta'}            
         """
 
-        table_list = [
-            file.path
-            for path in path_list
-            for depth in range(max_depth)
-            for file in self.deep_ls(path = path, max_depth = depth)
-            if file.path.endswith('.delta')
-        ]
+        try:
+            table_list = [
+                file.path
+                for path in path_list
+                for depth in range(max_depth)
+                for file in self.deep_ls(path = path, max_depth = depth)
+                if file.path.endswith('.delta')
+            ]
+        except FileNotFoundError:
+            table_list = []
 
         return {
             table_path.split('/')[-1].replace('.delta', ''): {'url': table_path}
