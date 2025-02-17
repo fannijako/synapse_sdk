@@ -1,14 +1,15 @@
 import json
 
-import mssparkutils # type: ignore
-import pyspark.sql.functions as F # type: ignore
-
 from datetime import datetime, timedelta
 from functools import cached_property
 from typing import Iterator, Tuple, Union
 
+import mssparkutils # type: ignore
+import pyspark.sql.functions as F # type: ignore
+
 from delta.tables import DeltaTable # type: ignore
 from pyspark.sql import DataFrame # type: ignore
+from py4j.java_gateway import Py4JJavaError  # type: ignore
 
 
 class PositiveNumber:
@@ -105,7 +106,7 @@ class Utils(object):
                 for file in self.deep_ls(path = path, max_depth = depth)
                 if file.path.endswith('.delta')
             ]
-        except FileNotFoundError:
+        except Py4JJavaError:
             table_list = []
 
         return {
