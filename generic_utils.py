@@ -466,10 +466,10 @@ class DataPlaceholder(DataProduct):
 
     def _find_path(self) -> Tuple[str, str, str]:
         if self.name in self.curated_tables and self.layer == 'curated':
-            return self.curated_tables.get(self._name)
+            return self.curated_tables.get(self._name).get('url')
 
         if self.name in self.trusted_tables and self.layer == 'trusted':
-            return self.trusted_path.get(self._name)
+            return self.trusted_path.get(self._name).get('url')
 
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
