@@ -89,6 +89,30 @@ class Utils(object):
 
         mssparkutils.fs.cp('file:' + temp_path, target_path, recurse=False) # type: ignore
 
+    def get_all_deltas(self, path_list: list[str], max_depth: int = 3) -> dict:
+        """
+        Create a dictionary of the available tables with their path
+
+        Returns: dict
+            E.g. {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/standardized/sap/x04_slt/test_table.delta'}            
+        """
+
+        try:
+            table_list = [
+                file.path
+                for path in path_list
+                for depth in range(max_depth)
+                for file in self.deep_ls(path = path, max_depth = depth)
+                if file.path.endswith('.delta')
+            ]
+        except FileNotFoundError:
+            table_list = []
+
+        return {
+            table_path.split('/')[-1].replace('.delta', ''): {'url': table_path}
+            for table_path in table_list
+        }
+
 
 class Notebook(Utils):
     exit_values = {}
@@ -345,31 +369,6 @@ class DataProduct(Notebook):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
-    
-    def get_all_deltas(self, path_list: list[str], max_depth: int = 3) -> dict:
-        """
-        Create a dictionary of the available tables with their path
-
-        Returns: dict
-            E.g. {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/standardized/sap/x04_slt/test_table.delta'}            
-        """
-
-        try:
-            table_list = [
-                file.path
-                for path in path_list
-                for depth in range(max_depth)
-                for file in self.deep_ls(path = path, max_depth = depth)
-                if file.path.endswith('.delta')
-            ]
-        except FileNotFoundError:
-            table_list = []
-
-        return {
-            table_path.split('/')[-1].replace('.delta', ''): {'url': table_path}
-            for table_path in table_list
-        }
-
 
     @cached_property
     def list_tables_in_curated(self) -> dict:
