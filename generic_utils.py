@@ -266,6 +266,12 @@ class Notebook(Utils):
     def cluster(self):
         return self._cluster
 
+    def set_spark_datetime_settings(self) -> None:
+        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore
+        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED") # type: ignore
+        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore
+        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore
+
     def __eq__(self, other_notebook) -> bool:
 
         same_workspace_name = self.workspace_name == other_notebook.workspace_name
@@ -282,12 +288,6 @@ class Notebook(Utils):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
-
-    def set_spark_datetime_settings(self) -> None:
-        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore
 
     @classmethod
     def set_exit_value(cls, key: str, value: Union[str, list]) -> None:
@@ -313,7 +313,7 @@ class Notebook(Utils):
             cls.exit_values[key] = value
             return
 
-        if isinstance(previous_value, list):
+        if isinstance(previous_value, list) and isinstance(value, list):
             previous_value.extend(value)
             cls.exit_values[key] = previous_value
             return
