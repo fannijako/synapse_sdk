@@ -707,7 +707,7 @@ class Table(DataPlaceholder):
         raise NotImplementedError
 
 
-class DataFrame(DataProduct):
+class DataFrame(DataPlaceholder):
     file_format = 'delta'
     version = PositiveNumber()
     timestamp = StringOrNoneValue()
