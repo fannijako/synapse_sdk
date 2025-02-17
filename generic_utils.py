@@ -38,12 +38,8 @@ class StringValue:
 
 
 class Utils(object):
-    _instance = None
-
-    def __new__(cls):
-         if not cls._instance:
-             cls._instance = super().__new__(cls)
-         return cls._instance
+    def __init__(self):
+        pass
 
     def __str__(cls) -> str:
         return f'Utils class with methods: {cls.__dict__}'
@@ -98,6 +94,7 @@ class Notebook(Utils):
     exit_values = {}
 
     def __init__(self):
+        super().__init__()
         self._workpsace_name = self._get_workpsace_name()
         _, self._data_product_name, self._environment, self._data_product_version = self._workspace_name.split('-')
         self._construct_paths()

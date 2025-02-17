@@ -13,9 +13,6 @@ from  generic_utils import Utils
 def utils_instance():
     return Utils()
 
-def test_singleton(utils_instance):
-    assert utils_instance is Utils(), "Utils is not a singleton"
-
 def test_str_representation(utils_instance):
     assert str(utils_instance).startswith("Utils class with methods:"), "Incorrect __str__ representation"
 
