@@ -95,53 +95,48 @@ class Notebook(Utils):
 
     def __init__(self):
         super().__init__()
-        self._workpsace_name = self._get_workpsace_name()
+        self._workspace_name = self._workspace_name
         _, self._data_product_name, self._environment, self._data_product_version = self._workspace_name.split('-')
         self._construct_paths()
 
-        self._notebook_name = self._get_notebook_name()
+        self._notebook_name = self._get_notebook_name
         
-        self._job_id = self._get_job_id()
-        self._pipeline_job_id = self._get_pipeline_job_id()
-        self._pool = self._get_pool()
-        self._cluster = self._get_cluster()
+        self._job_id = self._get_job_id
+        self._pipeline_job_id = self._get_pipeline_job_id
+        self._pool = self._get_pool
+        self._cluster = self._get_cluster
 
         self.set_spark_datetime_settings()
 
     @cached_property
-    def _get_workpsace_name(self):
-        return mssparkutils.env.getWorkspaceName() # type: ignore
+    def _workspace_name(self):
+        self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
+        return self._workspace_name
 
     @cached_property
     def _get_notebook_name(self):
-        return mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+        return self._notebook_name
 
     @cached_property
     def _get_job_id(self):
-        return mssparkutils.env.getJobId() # type: ignore
+        self._job_id = mssparkutils.env.getJobId() # type: ignore
+        return self._job_id
 
     @cached_property
     def _get_pipeline_job_id(self):
-        return mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+        self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+        return self._pipeline_job_id
 
     @cached_property
     def _get_pool(self):
-        return mssparkutils.env.getPoolName() # type: ignore
+        self._pool = mssparkutils.env.getPoolName() # type: ignore
+        return self._pool
 
     @cached_property
     def _get_cluster(self):
-        return mssparkutils.env.getClusterId() # type: ignore
-
-    @property
-    def workspace_name(self):
-        return self._workspace_name
-
-    @workspace_name.setter
-    def workspace_name(self, value):
-        raise UserWarning(f"""Workspace_name can't be changed to {value}. Workspace name is extraced using the mssparkutils library.
-                             You can manually change the data_product_name, environment and data_product_version attributes
-                             if you would like to work with data from a different data product or environment.
-                          """)
+        self._cluster = mssparkutils.env.getClusterId() # type: ignore
+        return self._cluster
 
     @property
     def data_product_name(self):
@@ -218,26 +213,6 @@ class Notebook(Utils):
                """)
         self._data_product_version = value
         self._construct_paths()
-
-    @property
-    def notebook_name(self):
-        return self._notebook_name
-
-    @property
-    def job_id(self):
-        return self._job_id
-
-    @property
-    def pipeline_job_id(self):
-        return self._pipeline_job_id
-
-    @property
-    def pool(self):
-        return self._pool
-
-    @property
-    def cluster(self):
-        return self._cluster
 
     def _construct_paths(self) -> None:
         self._azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
