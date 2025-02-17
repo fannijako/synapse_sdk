@@ -124,12 +124,12 @@ class Notebook(Utils):
 
         if value != self._data_product_name:
             print(f"""Data product name is by default extracted from the workspace name ({self.workspace_name}).
-                      Current value is {self._data_product_name}, which you'll overwrite.
-                      The path properties will be recalculated by this operation as well.
-                      New values will be:
-                        data_product_name: {value}
-                        environment: {self._environment}
-                        data_product_version: {self._data_product_version}
+                  Current value is {self._data_product_name}, which you'll overwrite.
+                  The path properties will be recalculated by this operation as well.
+                  New values will be:
+                    data_product_name: {value}
+                    environment: {self._environment}
+                    data_product_version: {self._data_product_version}
                    """)
             self._data_product_name = value
             self._construct_paths()
@@ -270,10 +270,10 @@ class Notebook(Utils):
 
         same_workspace_name = self.workspace_name == other_notebook.workspace_name
         same_job_id = self.job_id == other_notebook.job_id
-        same_notebook_name = self.notebook_name and other_notebook.notebook_name
-        same_pipeline_job_id = self.pipeline_job_id and other_notebook.pipeline_job_id
-        same_pool = self.pool and other_notebook.pool
-        same_cluster = self.cluster and other_notebook.cluster
+        same_notebook_name = self.notebook_name == other_notebook.notebook_name
+        same_pipeline_job_id = self.pipeline_job_id == other_notebook.pipeline_job_id
+        same_pool = self.pool == other_notebook.pool
+        same_cluster = self.cluster == other_notebook.cluster
 
         return same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
 
