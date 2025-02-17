@@ -373,7 +373,7 @@ class DataProduct(Notebook):
 
     @cached_property
     def curated_tables(self) -> dict:
-        return self.get_all_deltas([self._standardized_curated_path, self._sensitive_standardized_curated_path], max_depth = 10)
+        return self.get_all_deltas([self._curated_path], max_depth = 10)
 
     @cached_property
     def trusted_tables(self) -> dict:
