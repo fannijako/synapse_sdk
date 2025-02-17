@@ -488,7 +488,7 @@ class Table(DataPlaceholder):
     def calculate_table_properties(self):
         self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore
         self.load_type = self.load_type if self.load_type else self._get_load_type()
-        self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
+        self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self.load_type)
         self.table_size = self.get_target_table_size()
         self.target_file_size = self.calculate_target_file_size()
 
