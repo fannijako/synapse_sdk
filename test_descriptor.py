@@ -4,11 +4,12 @@ from unittest.mock import MagicMock
 
 sys.modules["mssparkutils"] = MagicMock()
 
-from  generic_utils import PositiveNumber, StringValue
+from  generic_utils import PositiveNumber, StringValue, StringOrNoneValue
 
 class TestClass:
     number = PositiveNumber()
     string = StringValue()
+    stringOrNone = StringOrNoneValue()
 
 @pytest.fixture
 def instance():
@@ -45,3 +46,16 @@ def test_integer_assignment_to_string(instance):
 def test_none_assignment_to_string(instance):
      with pytest.raises(TypeError, match="string expected"):
         instance.string = None
+
+def test_string_assignment_to_string_or_None(instance):
+    instance.stringOrNone = 'string'
+    assert instance.stringOrNone == 'string', "String can't be assigned to StringValue."
+
+def test_integer_assignment_to_string_or_None(instance):
+    with pytest.raises(TypeError, match="string expected"):
+        instance.stringOrNone = 10
+
+def test_none_assignment_to_string_or_None(instance):
+    instance.stringOrNone = None
+    assert instance.stringOrNone is None, "None can't be assigned to StringValue."
+

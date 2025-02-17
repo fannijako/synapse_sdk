@@ -38,6 +38,19 @@ class StringValue:
         instance.__dict__[self._name] = value
 
 
+class StringOrNoneValue:
+    def __set_name__(self, owner, name):
+        self._name = name
+
+    def __get__(self, instance, owner):
+        return instance.__dict__[self._name]
+
+    def __set__(self, instance, value):
+        if not isinstance(value, str | None):
+            raise TypeError("string expected")
+        instance.__dict__[self._name] = value
+
+
 class Utils(object):
     def __init__(self):
         pass
@@ -422,7 +435,7 @@ class DataProduct(Notebook):
 
 
 class DataPlaceholder(DataProduct):
-    load_type = StringValue()
+    load_type = StringOrNoneValue()
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
 
@@ -700,7 +713,7 @@ class Table(DataPlaceholder):
 class DataFrame(DataProduct):
     file_format = 'delta'
     version = PositiveNumber()
-    timestamp = StringValue()
+    timestamp = StringOrNoneValue()
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None):
 
