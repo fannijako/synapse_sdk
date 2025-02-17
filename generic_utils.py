@@ -486,7 +486,7 @@ class Table(DataPlaceholder):
         self.calculate_table_properties()
 
     def calculate_table_properties(self):
-        self._delta_table = self._get_delta_table()
+        self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore
         self.load_type = self.load_type if self.load_type else self._get_load_type()
         self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
         self.table_size = self.get_target_table_size()
@@ -499,9 +499,6 @@ class Table(DataPlaceholder):
     @property
     def dataframe(self):
         return self._dataframe
-
-    def _get_delta_table(self):
-        self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore
 
     def _get_load_type(self) -> str:
         """
