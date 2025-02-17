@@ -486,22 +486,22 @@ class Table(DataPlaceholder):
         self.calculate_table_properties()
 
     def calculate_table_properties(self):
-        self._DeltaTable = self._get_delta_table()
+        self._delta_table = self._get_delta_table()
         self.load_type = self.load_type if self.load_type else self._get_load_type()
         self._dataframe = DataFrame(name = self._name, layer = self._layer, load_type = self._load_type)
         self.table_size = self.get_target_table_size()
         self.target_file_size = self.calculate_target_file_size()
 
     @property
-    def DeltaTable(self):
-        return self._DeltaTable
+    def delta_table(self):
+        return self._delta_table
 
     @property
     def dataframe(self):
         return self._dataframe
 
     def _get_delta_table(self):
-        self._DeltaTable = DeltaTable.forPath(spark, self.path) # type: ignore
+        self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore
 
     def _get_load_type(self) -> str:
         """
@@ -526,7 +526,7 @@ class Table(DataPlaceholder):
             int: target table size in bytes
         """
 
-        detail_df = self._DeltaTable.detail()
+        detail_df = self._delta_table.detail()
         table_size = detail_df.select('sizeInBytes').collect()[0][0]
         self.table_size = table_size
         return table_size
@@ -573,7 +573,7 @@ class Table(DataPlaceholder):
         if hours < 168 and force:
             spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
 
-        self._DeltaTable.vacuum(retentionHours = hours)
+        self._delta_table.vacuum(retentionHours = hours)
 
     def zorder(self, columns: list, partition_filter: str = None) -> None:
 
@@ -582,19 +582,19 @@ class Table(DataPlaceholder):
             raise ValueError('Columns must be set')
 
         if not partition_filter:
-            self._DeltaTable.optimize().executeZOrderBy(*columns)
+            self._delta_table.optimize().executeZOrderBy(*columns)
         else:
-            self._DeltaTable.optimize().where(partition_filter).executeZOrderBy(*columns)
+            self._delta_table.optimize().where(partition_filter).executeZOrderBy(*columns)
 
     def optimize(self, partition_filter: str = None) -> None:
 
         if not partition_filter:
-            self._DeltaTable.optimize().executeCompaction()
+            self._delta_table.optimize().executeCompaction()
         else:
-            self._DeltaTable.optimize().where(partition_filter).executeCompaction()
+            self._delta_table.optimize().where(partition_filter).executeCompaction()
 
     def history(self, limit: int = 10) -> DataFrame:
-        return self._DeltaTable.history(limit)
+        return self._delta_table.history(limit)
     
     def calculate_enforce_save_target_table_metadata(self) -> None:
         """
