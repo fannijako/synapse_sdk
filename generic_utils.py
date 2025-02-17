@@ -356,8 +356,8 @@ class Notebook(Utils):
 class DataProduct(Notebook):
     def __init__(self):
         super().__init__()
-        self.curated_tables = self.list_tables_in_curated()
-        self.trusted_tables = self.list_tables_in_trusted()
+        _ = self.curated_tables()
+        _ = self.trusted_tables()
 
     def __eq__(self, other_data_product) -> bool:
         return self.azure_storage_name == other_data_product.azure_storage_name
@@ -372,11 +372,11 @@ class DataProduct(Notebook):
         return f"{type(self).__name__}()"
 
     @cached_property
-    def list_tables_in_curated(self) -> dict:
+    def curated_tables(self) -> dict:
         return self.get_all_deltas([self._standardized_curated_path, self._sensitive_standardized_curated_path])
 
     @cached_property
-    def list_tables_in_trusted(self) -> dict:
+    def trusted_tables(self) -> dict:
         return self.get_all_deltas([self._trusted_path], max_depth = 4)
 
     def optimize_all(self, layer: str = 'curated', partition_filter: str = None):
