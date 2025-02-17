@@ -590,7 +590,7 @@ class Table(DataPlaceholder):
         else:
             self._delta_table.optimize().where(partition_filter).executeCompaction()
 
-    def history(self, limit: int = 10) -> DataFrame:
+    def history(self, limit: int = 10):
         return self._delta_table.history(limit)
     
     def calculate_enforce_save_target_table_metadata(self) -> None:
@@ -716,7 +716,7 @@ class DataFrame(DataProduct):
 
         if not isinstance(timestamp, str | None):
             raise TypeError('String expected for timestamp.')
-        if self.version and self.timestamp:
+        if version and timestamp:
             raise ValueError("Can't set both version and timestamp")
 
         super().__init__(name = name, load_type = load_type, layer = layer)
