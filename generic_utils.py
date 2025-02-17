@@ -95,7 +95,7 @@ class Notebook(Utils):
 
     def __init__(self):
         super().__init__()
-        _ = self.workspace_name
+        self._workspace_name = self._get_workspace_name()
         _, self._data_product_name, self._environment, self._data_product_version = self.workspace_name.split('-')
         self._construct_paths()
 
@@ -110,6 +110,9 @@ class Notebook(Utils):
 
     @cached_property
     def workspace_name(self):
+        return self._workspace_name
+
+    def _get_workspace_name(self):
         return mssparkutils.env.getWorkspaceName() # type: ignore
 
     @property
