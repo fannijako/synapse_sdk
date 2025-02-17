@@ -35,7 +35,13 @@ echo "All tests passed. Deactivating virtual environment..."
 
 deactivate
 
-echo "Virtual environment deactivated. Starting the .py to .json conversions..."
+echo "Virtual environment deactivated. Commiting to the repository..."
+
+git add .
+git commit -m $COMMIT_MESSAGE
+git push
+
+echo "Git commit is finished for the py files. Starting the .py to .json conversions..."
 
 for file in "${FILES[@]}"; do
     $PYTHON_VERSION $NOTEBOOK_GENERATION_SCRIPT "$file"
@@ -86,5 +92,7 @@ rm -rf __pycache__
 rm -rf .pytest_cache
 rm -rf .venv
 rm -rf notebook
+
+clear
 
 echo "Successfully finished."

@@ -95,48 +95,22 @@ class Notebook(Utils):
 
     def __init__(self):
         super().__init__()
-        self._workspace_name = self._workspace_name
-        _, self._data_product_name, self._environment, self._data_product_version = self._workspace_name.split('-')
+        _ = self.workspace_name
+        _, self._data_product_name, self._environment, self._data_product_version = self.workspace_name.split('-')
         self._construct_paths()
 
-        self._notebook_name = self._get_notebook_name
+        _ = self.notebook_name
         
-        self._job_id = self._get_job_id
-        self._pipeline_job_id = self._get_pipeline_job_id
-        self._pool = self._get_pool
-        self._cluster = self._get_cluster
+        _ = self.job_id
+        _ = self.pipeline_job_id
+        _ = self.pool
+        _ = self.cluster
 
         self.set_spark_datetime_settings()
 
     @cached_property
-    def _workspace_name(self):
-        self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
-        return self._workspace_name
-
-    @cached_property
-    def _get_notebook_name(self):
-        self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
-        return self._notebook_name
-
-    @cached_property
-    def _get_job_id(self):
-        self._job_id = mssparkutils.env.getJobId() # type: ignore
-        return self._job_id
-
-    @cached_property
-    def _get_pipeline_job_id(self):
-        self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
-        return self._pipeline_job_id
-
-    @cached_property
-    def _get_pool(self):
-        self._pool = mssparkutils.env.getPoolName() # type: ignore
-        return self._pool
-
-    @cached_property
-    def _get_cluster(self):
-        self._cluster = mssparkutils.env.getClusterId() # type: ignore
-        return self._cluster
+    def workspace_name(self):
+        return mssparkutils.env.getWorkspaceName() # type: ignore
 
     @property
     def data_product_name(self):
@@ -148,7 +122,7 @@ class Notebook(Utils):
             raise TypeError("Data_product_name attribute must be a string.")
 
         if value != self._data_product_name:
-            print(f"""Data product name is by default extracted from the workspace name ({self._workspace_name}).
+            print(f"""Data product name is by default extracted from the workspace name ({self.workspace_name}).
                       Current value is {self._data_product_name}, which you'll overwrite.
                       The path properties will be recalculated by this operation as well.
                       New values will be:
@@ -177,7 +151,7 @@ class Notebook(Utils):
             print("You can't work with dev data in the prod workspace.")
             return
 
-        print(f"""Environment is by default extracted from the workspace name ({self._workspace_name}).
+        print(f"""Environment is by default extracted from the workspace name ({self.workspace_name}).
                   Current value is d, which you'll overwrite to p for prod.
                   You'll be working with prod data in the dev workspace.
 
@@ -203,7 +177,7 @@ class Notebook(Utils):
             print("Data_product_version attribute is already set to the same value.")
             return
 
-        print(f"""Data_product_version is by default extracted from the workspace name ({self._workspace_name}).
+        print(f"""Data_product_version is by default extracted from the workspace name ({self.workspace_name}).
                   Current value is {self._data_product_version}, which you'll overwrite.
                   The path properties will be recalculated by this operation as well.
                   New values will be:
@@ -271,9 +245,29 @@ class Notebook(Utils):
                              Set the data_product_name, environment and data_product_version attributes
                              and the trusted_path attribute will be set accordingly.""")
 
+    @cached_property
+    def notebook_name(self):
+        return mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
+
+    @cached_property
+    def job_id(self):
+        return mssparkutils.env.getJobId() # type: ignore
+
+    @cached_property
+    def pipeline_job_id(self):
+        return mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
+
+    @cached_property
+    def pool(self):
+        return mssparkutils.env.getPoolName() # type: ignore
+
+    @cached_property
+    def cluster(self):
+        return mssparkutils.env.getClusterId() # type: ignore
+
     def __eq__(self, other_notebook) -> bool:
 
-        same_workspace_name = self._workspace_name == other_notebook.workspace_name
+        same_workspace_name = self.workspace_name == other_notebook.workspace_name
         same_job_id = self.job_id == other_notebook.job_id
         same_notebook_name = self.notebook_name and other_notebook.notebook_name
         same_pipeline_job_id = self.pipeline_job_id and other_notebook.pipeline_job_id
@@ -283,7 +277,7 @@ class Notebook(Utils):
         return same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
 
     def __str__(self) -> str:
-        return f'{self.notebook_name} in {self._workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
+        return f'{self.notebook_name} in {self.workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
