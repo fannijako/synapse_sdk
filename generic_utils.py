@@ -97,6 +97,8 @@ class Utils(object):
             E.g. {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/standardized/sap/x04_slt/test_table.delta'}            
         """
 
+        print('test change')
+
         try:
             table_list = [
                 file.path
