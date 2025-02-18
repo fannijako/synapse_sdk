@@ -1,4 +1,6 @@
  # pylint: disable=too-many-lines
+# TODO: move the classes to files
+
 import json
 
 from datetime import datetime, timedelta
@@ -511,6 +513,7 @@ class DataProduct(Notebook):
 
         def execute_layer(table_names: list, layer: str):
             for table_name in table_names:
+                print(table_name)
                 table = Table(table_name, layer = layer)
                 table.optimize(partition_filter = partition_filter)
 
@@ -533,6 +536,7 @@ class DataProduct(Notebook):
         spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore # pylint: disable=undefined-variable
         def execute_layer(table_names: list, layer: str):
             for table_name in table_names:
+                print(table_name)
                 table = Table(table_name, layer = layer)
                 table.vacuum(hours = hours, force = force)
 
