@@ -1,3 +1,4 @@
+ # pylint: disable=too-many-lines
 import json
 
 from datetime import datetime, timedelta
@@ -8,11 +9,14 @@ import mssparkutils # type: ignore
 import pyspark.sql.functions as F # type: ignore
 
 from delta.tables import DeltaTable # type: ignore
-from pyspark.sql import DataFrame # type: ignore
 from py4j.java_gateway import Py4JJavaError  # type: ignore
 
 
 class PositiveNumber:
+    """
+    Descriptor class for positive number attributes
+    """
+
     def __set_name__(self, owner, name):
         self._name = name
 
@@ -26,6 +30,10 @@ class PositiveNumber:
 
 
 class StringValue:
+    """
+    Descriptor class for not-none string attributes
+    """
+
     def __set_name__(self, owner, name):
         self._name = name
 
@@ -39,6 +47,10 @@ class StringValue:
 
 
 class StringOrNoneValue:
+    """
+    Descriptor class for possibly-none string attributes
+    """
+
     def __set_name__(self, owner, name):
         self._name = name
 
@@ -52,6 +64,21 @@ class StringOrNoneValue:
 
 
 class Utils():
+    """
+    Utils class
+
+    Attributes: -
+
+    Methods:
+        __init__
+        __str__
+        __repr__
+        deep_ls
+        get_previous_date
+        write_non_distributed_json
+        get_all_deltas
+    """
+
     def __init__(self):
         pass
 
@@ -128,7 +155,38 @@ class Utils():
         }
 
 
-class Notebook(Utils):
+class Notebook(Utils): # pylint: disable=too-many-instance-attributes
+    """
+    Notebook class
+    Subclass of Utils
+
+    Attributes:
+        exit_values
+        workspace_name
+        data_product_name
+        environment
+        data_product_version
+        notebook_name
+        job_id
+        pipeline_job_id
+        pool
+        cluster
+        azure_storage_name
+        curated_path
+        standardized_curated_path
+        sensitive_standardized_curated_path
+        trusted_path
+
+    Methods:
+        __init__
+        __str__
+        __repr__
+        __eq__
+        set_spark_datetime_settings
+        set_exit_value
+        exit
+    """
+
     exit_values = {}
 
     def __init__(self):
@@ -308,10 +366,10 @@ class Notebook(Utils):
         return self._cluster
 
     def set_spark_datetime_settings(self) -> None:
-        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore
-        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore
+        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore # pylint: disable=undefined-variable
+        spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED") # type: ignore # pylint: disable=undefined-variable
+        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead"    , "CORRECTED") # type: ignore # pylint: disable=undefined-variable
+        spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite"   , "CORRECTED") # type: ignore # pylint: disable=undefined-variable
 
     def __eq__(self, other_notebook) -> bool:
 
@@ -346,7 +404,7 @@ class Notebook(Utils):
         if not isinstance(value, str | list):
             raise TypeError('value must be of type string or list')
 
-        if key not in cls.exit_values.keys():
+        if key not in cls.exit_values:
             cls.exit_values[key] = value
             return
 
@@ -371,6 +429,24 @@ class Notebook(Utils):
 
 
 class DataProduct(Notebook):
+    """
+    DataProduct
+    Subclass of Notebook
+
+    Attributes:
+        curated_tables
+        trusted_tables
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+        __contains__
+        optimize_all
+        vacuum_all
+    """
+
     def __init__(self):
         super().__init__()
         _ = self.curated_tables
@@ -426,7 +502,7 @@ class DataProduct(Notebook):
             Which runs a VACUUM command with 7 days retention on all delta tables in the curated layer.
         """
 
-        spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore
+        spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore # pylint: disable=undefined-variable
         def execute_layer(table_names: list, layer: str):
             for table_name in table_names:
                 table = Table(table_name, layer = layer)
@@ -440,6 +516,10 @@ class DataProduct(Notebook):
 
 
 class DataPlaceholder(DataProduct):
+    """
+    Placeholder class for Table and LHTSparkDataFrame
+    """
+
     load_type = StringOrNoneValue()
 
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
@@ -482,7 +562,37 @@ class DataPlaceholder(DataProduct):
         return isinstance(other_table, DataPlaceholder) and super().__eq__(other_table) and self._name == other_table.name and self._layer == other_table.layer
 
 
-class Table(DataPlaceholder):
+class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
+    """
+    Table class
+    Subclass of DataPlaceholder
+
+    Attributes:
+        name
+        load_type
+        layer
+        table_size
+        target_file_size
+        detla_table
+        dataframe
+
+    Methods:
+        __init__
+        __str__
+        __repr__
+        __eq__
+        calculate_table_properties
+        get_target_table_size
+        calculate_target_file_size
+        vacuum
+        optimize
+        zorder
+        history
+        calculate_enforce_save_target_table_metadata
+        calculate_zorder_and_analyse_columns
+        calculate_statistics
+    """
+
     table_size = PositiveNumber()
     target_file_size = StringValue()
 
@@ -491,9 +601,9 @@ class Table(DataPlaceholder):
         self.calculate_table_properties()
 
     def calculate_table_properties(self):
-        self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore
+        self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore # pylint: disable=undefined-variable
         self.load_type = self.load_type if self.load_type else self._get_load_type()
-        self._dataframe = spark.read.format('delta').load(self.path) # type: ignore
+        self._dataframe = spark.read.format('delta').load(self.path) # type: ignore # pylint: disable=undefined-variable
         self.table_size = self.get_target_table_size()
         self.target_file_size = self.calculate_target_file_size()
 
@@ -573,7 +683,7 @@ class Table(DataPlaceholder):
             raise UserWarning('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
 
         if hours < 168 and force:
-            spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore
+            spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore # pylint: disable=undefined-variable
 
         self._delta_table.vacuum(retentionHours = hours)
 
@@ -609,10 +719,10 @@ class Table(DataPlaceholder):
 
         # Set the table properties, so that the upcoming writes are using the same target file sizes
         # Effects optimize, zorder, autoopzimite and autocompact
-        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.targetFileSize'='{self._target_file_size}')") # type: ignore
+        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.targetFileSize'='{self._target_file_size}')") # type: ignore # pylint: disable=undefined-variable
 
         # Enable autooptimize, so that the later executions will write new files with target_file_size
-        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
+        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore # pylint: disable=undefined-variable
 
     def calculate_zorder_and_analyse_columns(self, primary_keys: list[str]) -> tuple[list[str], list[str]]:
         """
@@ -655,7 +765,7 @@ class Table(DataPlaceholder):
                 analyse_columns.append(column)
 
         # Sort the possible z-ordering columns based on the ratio
-        zorder_columns_sorted = sorted(zorder_columns, key = lambda col: zorder_columns.get(col))
+        zorder_columns_sorted = sorted(zorder_columns, key = lambda col: zorder_columns.get(col))  # pylint: disable=unnecessary-lambda
         zorder_columns = zorder_columns_sorted[0:4]
 
         if len(zorder_columns_sorted) > 4:
@@ -690,7 +800,7 @@ class Table(DataPlaceholder):
 
             nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
             if alter_statistics_number:
-                spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore
+                spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore # pylint: disable=undefined-variable
 
             nbr_columns = len(self._dataframe.schema)
 
@@ -713,11 +823,56 @@ class Table(DataPlaceholder):
 
 
 class LHTSparkDataFrame(DataPlaceholder):
+    """
+    LHTSparkDataFrame
+    Subclass of DataPlaceholder
+
+    Attributes:
+        file_format
+        version
+        timestamp
+        name
+        load_type
+        layer
+        version
+        timestamp
+        latest_version
+        dataframe
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+        __lt__
+        __le__
+        __ge__
+        __gt__
+        __add__
+        __sub__
+        load_dataframe
+        get_version
+        load_version_minus_n
+        is_changed_since_last_version
+        write_to_database
+        add_timestamp_column
+        add_hash_column
+        rename_columns_w_pattern
+        rename_columns_w_mapping
+        cast_data_columns
+        construct_merge_condition
+        write_to_excel
+    """
+
     file_format = 'delta'
     version = PositiveNumber()
     timestamp = StringOrNoneValue()
 
-    def __init__(self, name: str, load_type: str = None, layer: str = 'curated', version: int = None, timestamp: str = None):
+    def __init__(self, name: str, # pylint: disable=too-many-positional-arguments, too-many-arguments
+                 load_type: str = None,
+                 layer: str = 'curated',
+                 version: int = None,
+                 timestamp: str = None):
 
         if not isinstance(timestamp, str | None):
             raise TypeError('String expected for timestamp.')
@@ -775,14 +930,14 @@ class LHTSparkDataFrame(DataPlaceholder):
 
     def load_dataframe(self) -> None:
         if not self.version and not self.timestamp:
-            self.dataframe = spark.read.format('delta').load(self.path) # type: ignore
+            self.dataframe = spark.read.format('delta').load(self.path) # type: ignore # pylint: disable=undefined-variable
         elif self.version:
-            self.dataframe = spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore
+            self.dataframe = spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore # pylint: disable=undefined-variable
         elif self.timestamp:
-            self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore
+            self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore # pylint: disable=undefined-variable
 
     def get_version(self) -> int:
-        return int(self.history(1).select('version').collect()[0][0])
+        return int(self.history(1).select('version').collect()[0][0]) # pylint: disable=no-member
 
     def load_version_minus_n(self, timetravel: int = 1):
         return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
@@ -805,7 +960,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         return unioned_count_distinct != new_version_count_distinct
 
-    def write_to_database(self,
+    def write_to_database(self,# pylint: disable=too-many-positional-arguments, too-many-arguments
                           database_name: str,
                           database_schema: str,
                           table_name: str = None,
@@ -818,15 +973,15 @@ class LHTSparkDataFrame(DataPlaceholder):
         if mode == 'auto':
             mode = 'append' if self.load_type == 'scd1' else 'overwrite'
 
-        asql_database = aSQLDatabase(database_name, database_schema)
+        asql_database = AsqlDatabase(database_name, database_schema)
         table_name = table_name if table_name else self.name
-        connectionProperties, url, dbtable = asql_database.build_connection_properties(database_table = table_name)
+        connection_properties, url, dbtable = asql_database.build_connection_properties(database_table = table_name)
         (self.dataframe.write
                        .option("createTableOptions", create_table_statement)
                        .jdbc(url = url,
                              table=dbtable,
                              mode=mode,
-                             properties=connectionProperties
+                             properties=connection_properties
                             )
                     )
 
@@ -964,6 +1119,21 @@ class LHTSparkDataFrame(DataPlaceholder):
 
 
 class KeyVault(Notebook):
+    """
+    KeyVault
+    Subclass of Notebook
+
+    Attributes:
+        key_vault_name
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+        get_secret
+    """
+
     key_vault_name = StringValue()
 
     def __init__(self):
@@ -983,7 +1153,27 @@ class KeyVault(Notebook):
         raise NotImplementedError
 
 
-class aSQLDatabase(Notebook):
+class AsqlDatabase(Notebook):
+    """
+    Azure SQL Database
+    Subclass of Notebook
+
+    Attributes:
+        database_server
+        database_name
+        database_schema
+        database_server
+        asql_database_linked_service_name
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+        get_token
+        build_connection_properties
+    """
+
     database_name = StringValue()
     database_schema = StringValue()
     database_server = StringValue()
@@ -1001,7 +1191,7 @@ class aSQLDatabase(Notebook):
 
     def __eq__(self, other_database) -> bool:
 
-        same_type = isinstance(other_database, aSQLDatabase)
+        same_type = isinstance(other_database, AsqlDatabase)
         same_database_server = self.database_server == other_database.database_server
         same_database_name = self.database_name == other_database.database_name
         same_database_schema = self.database_schema == other_database.database_schema
@@ -1016,17 +1206,20 @@ class aSQLDatabase(Notebook):
         return f"{type(self).__name__}(database_name='{self.database_name}', database_schema={self.database_schema})"
 
     def get_token(self) -> str:
-        return TokenLibrary.getConnectionString(self.asql_database_linked_service_name) # type: ignore
+        return TokenLibrary.getConnectionString(self.asql_database_linked_service_name) # type: ignore # pylint: disable=undefined-variable
 
     def build_connection_properties(self, database_table: str) -> Tuple[dict, str, str]:
 
-        url = f"jdbc:sqlserver://{self.database_server};databaseName={self.database_name};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+        url = f"jdbc:sqlserver://{self.database_server};databaseName={self.database_name};"
+        url += "encrypt=true;trustServerCertificate=false;"
+        url += "hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+
         dbtable = self.database_schema + "." + database_table
-        connectionProperties = {
+        connection_properties = {
             "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver",
             "url": url,
             "dbtable": dbtable,
             "accessToken": self.get_token()
             }
 
-        return connectionProperties, url, dbtable
+        return connection_properties, url, dbtable

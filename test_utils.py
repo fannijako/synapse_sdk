@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pytest # type: ignore
 
 sys.modules["mssparkutils"] = MagicMock()
-from  generic_utils import Utils
+from  generic_utils import Utils # pylint: disable=wrong-import-position
 
 @pytest.fixture
 def utils_instance():
