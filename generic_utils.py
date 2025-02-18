@@ -469,7 +469,7 @@ class DataPlaceholder(DataProduct):
             return self.curated_tables.get(self._name).get('url')
 
         if self.name in self.trusted_tables and self.layer == 'trusted':
-            return self.trusted_path.get(self._name).get('url')
+            return self.trusted_tables.get(self._name).get('url')
 
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
