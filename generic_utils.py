@@ -312,6 +312,7 @@ class Notebook(Utils):
 
     def __eq__(self, other_notebook) -> bool:
 
+        same_type = isinstance(other_notebook, Notebook)
         same_workspace_name = self.workspace_name == other_notebook.workspace_name
         same_job_id = self.job_id == other_notebook.job_id
         same_notebook_name = self.notebook_name == other_notebook.notebook_name
@@ -319,7 +320,7 @@ class Notebook(Utils):
         same_pool = self.pool == other_notebook.pool
         same_cluster = self.cluster == other_notebook.cluster
 
-        return same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
+        return same_type and same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
 
     def __str__(self) -> str:
         return f'{self.notebook_name} in {self.workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
@@ -373,7 +374,7 @@ class DataProduct(Notebook):
         _ = self.trusted_tables
 
     def __eq__(self, other_data_product) -> bool:
-        return self.azure_storage_name == other_data_product.azure_storage_name
+        return isinstance(other_data_product, DataProduct) and self.azure_storage_name == other_data_product.azure_storage_name
 
     def __contains__(self, table: str) -> bool:
             return table in self.curated_tables.keys() or table in self.trusted_tables.keys()
@@ -474,7 +475,7 @@ class DataPlaceholder(DataProduct):
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
     def __eq__(self, other_table) -> bool:
-        return self.super() == other_table.super() and self._name == other_table.name and self._layer == other_table.layer
+        return isinstance(other_table, Table) and super().__eq__(other_table) and self._name == other_table.name and self._layer == other_table.layer
 
 
 class Table(DataPlaceholder):
@@ -729,29 +730,30 @@ class DataFrame(DataPlaceholder):
 
     def __eq__(self, other_dataframe) -> bool:
 
-        same_super = self.super() == other_dataframe.super()
+        same_type = isinstance(other_dataframe, DataFrame)
+        same_super = super().__eq__(other_dataframe)
         same_version = self.version == other_dataframe.version
         same_timestamp = self.timestamp == other_dataframe.timestamp
 
-        return same_super and same_version and same_timestamp
+        return same_type and same_super and same_version and same_timestamp
 
     def __lt__(self, other_dataframe: DataFrame) -> bool:
-        if not self.super() == other_dataframe.super():
+        if not super().__eq__(other_dataframe):
             raise ValueError('< operator only supported between different versions of the same table')
         return  self.version < other_dataframe.version
 
     def __le__(self, other_dataframe: DataFrame) -> bool:
-        if not self.super() == other_dataframe.super():
+        if not super().__eq__(other_dataframe):
             raise ValueError('<= operator only supported between different versions of the same table')
         return  self.version <= other_dataframe.version
 
     def __gt__(self, other_dataframe: DataFrame) -> bool:
-        if not self.super() == other_dataframe.super():
+        if not super().__eq__(other_dataframe):
             raise ValueError('> operator only supported between different versions of the same table')
         return  self.version > other_dataframe.version
 
     def __ge__(self, other_dataframe: DataFrame) -> bool:
-        if not self.super() == other_dataframe.super():
+        if not super().__eq__(other_dataframe):
             raise ValueError('>= operator only supported between different versions of the same table')
         return  self.version >= other_dataframe.version
 
@@ -965,7 +967,7 @@ class KeyVault(Notebook):
         self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
 
     def __eq__(self, other_keyvault) -> bool:
-        return self.key_vault_name == other_keyvault.key_vault_name
+        return isinstance(other_keyvault, KeyVault) and self.key_vault_name == other_keyvault.key_vault_name
 
     def __str__(self) -> str:
         return f'Key Vault linked service {self.key_vault_name}'
@@ -995,12 +997,13 @@ class aSQLDatabase(Notebook):
 
     def __eq__(self, other_database) -> bool:
 
+        same_type = isinstance(other_database, aSQLDatabase)
         same_database_server = self.database_server == other_database.database_server
         same_database_name = self.database_name == other_database.database_name
         same_database_schema = self.database_schema == other_database.database_schema
         same_asql_database_linked_service_name = self.asql_database_linked_service_name == other_database.asql_database_linked_service_name
 
-        return same_database_server and same_database_name and same_database_schema and same_asql_database_linked_service_name
+        return same_type and same_database_server and same_database_name and same_database_schema and same_asql_database_linked_service_name
 
     def __str__(self) -> str:
         return f'Azure SQL database linked service to the {self.database_schema} in {self.database_name} database'
