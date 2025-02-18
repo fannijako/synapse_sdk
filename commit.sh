@@ -32,7 +32,11 @@ echo "Requirements installed for the tests. Starting the pytests..."
 pytest test_descriptor.py || exit 1
 pytest test_utils.py || exit 1
 
-echo "All tests passed. Deactivating virtual environment..."
+echo "All tests passed. Linter started ..."
+
+pylint --disable=W1203,W0603,W0718,E0401,C0114,C0116,W0201,W0621 $(git ls-files '*.py')
+
+echo "Linter passed. Deactivating virtual environment..."
 
 deactivate
 

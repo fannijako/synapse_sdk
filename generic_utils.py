@@ -51,12 +51,12 @@ class StringOrNoneValue:
         instance.__dict__[self._name] = value
 
 
-class Utils(object):
+class Utils():
     def __init__(self):
         pass
 
-    def __str__(cls) -> str:
-        return f'Utils class with methods: {cls.__dict__}'
+    def __str__(self) -> str:
+        return f'Utils class with methods: {self.__dict__}'
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
@@ -98,7 +98,7 @@ class Utils(object):
         """
 
         temp_path = f"/tmp/{target_path.split('/')[-1]}"
-        with open(temp_path, 'w') as local_file:
+        with open(temp_path, 'w', encoding='utf-8') as local_file:
             json.dump(content, local_file)
 
         mssparkutils.fs.cp('file:' + temp_path, target_path, recurse=False) # type: ignore
@@ -108,7 +108,7 @@ class Utils(object):
         Create a dictionary of the available tables with their path
 
         Returns: dict
-            E.g. {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/standardized/sap/x04_slt/test_table.delta'}            
+            {'test_table': 'abfss://curated@dlstiscd002@dfs.windows.core.net/test_table.delta'}            
         """
 
         try:
@@ -139,7 +139,7 @@ class Notebook(Utils):
         self._construct_paths()
 
         self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
-        
+
         self._job_id = mssparkutils.env.getJobId() # type: ignore
         self._pipeline_job_id = mssparkutils.runtime.context.get('pipelinejobid') # type: ignore
         self._pool = mssparkutils.env.getPoolName() # type: ignore
@@ -161,8 +161,9 @@ class Notebook(Utils):
             raise TypeError("Data_product_name attribute must be a string.")
 
         if value != self._data_product_name:
-            print(f"""Data product name is by default extracted from the workspace name ({self.workspace_name}).
-                  Current value is {self._data_product_name}, which you'll overwrite.
+            print(f"""Data product name is by default extracted from the
+                  workspace name ({self.workspace_name}). Current value is
+                  {self._data_product_name}, which you'll overwrite.
                   The path properties will be recalculated by this operation as well.
                   New values will be:
                     data_product_name: {value}
@@ -190,8 +191,9 @@ class Notebook(Utils):
             print("You can't work with dev data in the prod workspace.")
             return
 
-        print(f"""Environment is by default extracted from the workspace name ({self.workspace_name}).
-                  Current value is d, which you'll overwrite to p for prod.
+        print(f"""Environment is by default extracted from the
+              workspace name ({self.workspace_name}). Current value is d,
+              which you'll overwrite to p for prod.
                   You'll be working with prod data in the dev workspace.
 
                   The path properties will be recalculated by this operation as well.
@@ -216,8 +218,9 @@ class Notebook(Utils):
             print("Data_product_version attribute is already set to the same value.")
             return
 
-        print(f"""Data_product_version is by default extracted from the workspace name ({self.workspace_name}).
-                  Current value is {self._data_product_version}, which you'll overwrite.
+        print(f"""Data_product_version is by default extracted from the
+              workspace name ({self.workspace_name}). Current value is
+              {self._data_product_version}, which you'll overwrite.
                   The path properties will be recalculated by this operation as well.
                   New values will be:
                         data_product_name: {self._data_product_name}
@@ -377,7 +380,7 @@ class DataProduct(Notebook):
         return isinstance(other_data_product, DataProduct) and self.azure_storage_name == other_data_product.azure_storage_name
 
     def __contains__(self, table: str) -> bool:
-            return table in self.curated_tables.keys() or table in self.trusted_tables.keys()
+        return table in self.curated_tables.keys() or table in self.trusted_tables.keys()
 
     def __str__(self) -> str:
         return f'{self.data_product_name} data product version {self.data_product_version}'
@@ -399,7 +402,8 @@ class DataProduct(Notebook):
 
         Example usage:
             DataProduct().optimize_all()
-            Which runs a OPTIMIZE command on all delta tables in the curated layer without a partition filter.
+            Which runs a OPTIMIZE command on all delta tables in the curated layer
+            without a partition filter.
         """
 
         def execute_layer(table_names: list, layer: str):
@@ -446,7 +450,7 @@ class DataPlaceholder(DataProduct):
             raise ValueError('Layer must be curated or trusted.')
 
         super().__init__()
-        
+
         self._name = name
         self._layer = layer
         self.load_type = load_type
@@ -515,7 +519,7 @@ class Table(DataPlaceholder):
                       if row.operation in ['MERGE', 'WRITE']]
 
         return 'scd1' if max(set(operations), key=operations.count) == 'MERGE' else 'full'
-    
+
     def get_target_table_size(self) -> int:
         """
         Get the delta lake table size in bytes, using the DESCRIBE DETAIL command
@@ -561,7 +565,7 @@ class Table(DataPlaceholder):
         return f"{self.data_product_name} data product's {self._name} table in {self._layer} layer"
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(name='{self._name}', load_type={self._load_type}, layer={self._layer})"
+        return f"{type(self).__name__}(name='{self._name}', load_type={self.load_type}, layer={self._layer})"
 
     def vacuum(self, hours: int = 168, force: bool = False) -> None:
 
@@ -593,7 +597,7 @@ class Table(DataPlaceholder):
 
     def history(self, limit: int = 10):
         return self._delta_table.history(limit)
-    
+
     def calculate_enforce_save_target_table_metadata(self) -> None:
         """
         Get the target Delta Lake table size in MB and 
@@ -609,7 +613,7 @@ class Table(DataPlaceholder):
 
         # Enable autooptimize, so that the later executions will write new files with target_file_size
         spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore
-   
+
     def calculate_zorder_and_analyse_columns(self, primary_keys: list[str]) -> tuple[list[str], list[str]]:
         """
         Select column candidates for Z-ORDER BY and ANALYZE from the primary keys
@@ -660,7 +664,7 @@ class Table(DataPlaceholder):
         self.zorder_columns = zorder_columns
         self.analyse_columns = analyse_columns
         return zorder_columns, analyse_columns
-    
+
     def calculate_statistics(self, primary_keys: list[str], alter_statistics_number: bool = False) -> tuple[str, str, int, int]:
         """
         Calculate the following statistics:
@@ -700,7 +704,7 @@ class Table(DataPlaceholder):
         Using the previous methods
         """
         raise NotImplementedError
-    
+
     def get_optimization_recommendations(self):
         """
         E.g. run an optimize, run a vacuum or use the following spark configs while reading
@@ -759,7 +763,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
     def __add__(self, version_increase: int):
         return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version + version_increase)
-    
+
     def __sub__(self, version_decrease: int):
         return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - version_decrease)
 
@@ -850,14 +854,14 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         # Add the current timestamp column in UTC
         self.dataframe = self.dataframe.withColumn(timestamp_column_name, F.current_timestamp())
-        
+
         # If a timezone is provided, convert the timestamp to the given timezone
         if timezone:
             self.dataframe = self.dataframe.withColumn(
                 timestamp_column_name,
                 F.from_utc_timestamp(F.col(timestamp_column_name), timezone)
             )
-        
+
         # Apply the specified timestamp format
         self.dataframe = self.dataframe.withColumn(
             timestamp_column_name,
@@ -882,7 +886,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         if f"{prefix}_hash" in self.dataframe.columns:
             raise ValueError("The provided column name already exists in the DataFrame.")
-        
+
         concatenated_cols = F.concat(*[self.dataframe[col] for col in self.dataframe.columns])
         self.dataframe = self.dataframe.withColumn(f"{prefix}_hash", F.sha2(concatenated_cols, 256))
 
@@ -897,7 +901,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         for colname in self.dataframe.columns:
             self.dataframe = self.dataframe.withColumnRenamed(colname, colname.replace(pattern_to_replace, replace_to))
-    
+
     def rename_columns_w_mapping(self, column_names: dict) -> None:
         """
         Apply the renaming to each column in the dictionary.
@@ -912,7 +916,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         for column_old_name, column_new_name in column_names.items():
             self.dataframe = self.dataframe.withColumnRenamed(column_old_name, column_new_name)
-    
+
     def cast_data_columns(self, column_types: dict) -> None:
         """
         Apply the casting to each column in the dictionary.
@@ -927,7 +931,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         for column_name, column_type in column_types.items():
             self.dataframe = self.dataframe.withColumn(column_name, F.col(column_name).cast(column_type))
-    
+
     @staticmethod
     def construct_merge_condition(pk: str, separator: str=',') -> str:
         """
@@ -942,9 +946,9 @@ class LHTSparkDataFrame(DataPlaceholder):
         """
         pk_array = pk.split(separator)
         condition = " AND ".join([f"src.{pk.strip()} <=> dst.{pk.strip()}" for pk in pk_array])
-        
+
         return condition
-    
+
     def write_to_excel(self, target_path: str) -> None:
         """
         Write the joined data to the target path in Excel format
@@ -952,7 +956,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         Args:
             target_path (str): abfss:// path to write the result to
         """
-    
+
         temp_path = f"/tmp/{target_path.split('/')[-1]}"
 
         self.dataframe.pandas_api().to_excel(temp_path, index=False, engine='openpyxl')
@@ -974,7 +978,7 @@ class KeyVault(Notebook):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
-    
+
     def get_secret(self, secret_name: str) -> str:
         raise NotImplementedError
 
@@ -1010,7 +1014,7 @@ class aSQLDatabase(Notebook):
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(database_name='{self.database_name}', database_schema={self.database_schema})"
-    
+
     def get_token(self) -> str:
         return TokenLibrary.getConnectionString(self.asql_database_linked_service_name) # type: ignore
 
@@ -1024,5 +1028,5 @@ class aSQLDatabase(Notebook):
             "dbtable": dbtable,
             "accessToken": self.get_token()
             }
-        
+
         return connectionProperties, url, dbtable

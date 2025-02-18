@@ -2,3 +2,4 @@ delta-spark
 pytest
 pyspark
 pyspark[sql]
+pylint

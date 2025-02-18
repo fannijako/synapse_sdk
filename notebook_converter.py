@@ -18,7 +18,7 @@ def generate_paths():
 
 def read_json_file(notebook_path: str) -> dict:
 
-    with open(notebook_path) as notebook_file:
+    with open(notebook_path, encoding='utf-8') as notebook_file:
         json_file_content = json.loads(notebook_file.read())
 
     return json_file_content
@@ -26,7 +26,7 @@ def read_json_file(notebook_path: str) -> dict:
 
 def write_py_file(value: list, py_path: str) -> None:
 
-    with open(py_path, 'w') as py_file:
+    with open(py_path, 'w', encoding='utf-8') as py_file:
         for line in value:
             py_file.write(line)
             py_file.write(os.linesep)

@@ -1,6 +1,8 @@
-import pytest # type: ignore
 import sys
+
 from unittest.mock import MagicMock
+
+import pytest # type: ignore
 
 sys.modules["mssparkutils"] = MagicMock()
 
@@ -44,18 +46,17 @@ def test_integer_assignment_to_string(instance):
         instance.string = 10
 
 def test_none_assignment_to_string(instance):
-     with pytest.raises(TypeError, match="string expected"):
+    with pytest.raises(TypeError, match="string expected"):
         instance.string = None
 
-def test_string_assignment_to_string_or_None(instance):
+def test_string_assignment_to_string_or_none(instance):
     instance.stringOrNone = 'string'
     assert instance.stringOrNone == 'string', "String can't be assigned to StringValue."
 
-def test_integer_assignment_to_string_or_None(instance):
+def test_integer_assignment_to_string_or_none(instance):
     with pytest.raises(TypeError, match="string expected"):
         instance.stringOrNone = 10
 
-def test_none_assignment_to_string_or_None(instance):
+def test_none_assignment_to_string_or_none(instance):
     instance.stringOrNone = None
     assert instance.stringOrNone is None, "None can't be assigned to StringValue."
-
