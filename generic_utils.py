@@ -475,7 +475,7 @@ class DataPlaceholder(DataProduct):
         raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
 
     def __eq__(self, other_table) -> bool:
-        return isinstance(other_table, Table) and super().__eq__(other_table) and self._name == other_table.name and self._layer == other_table.layer
+        return isinstance(other_table, DataPlaceholder) and super().__eq__(other_table) and self._name == other_table.name and self._layer == other_table.layer
 
 
 class Table(DataPlaceholder):
