@@ -34,7 +34,17 @@ pytest test_utils.py || exit 1
 
 echo "All tests passed. Linter started ..."
 
-pylint --disable=W1203,C0114,C0116,W0201,W0621,W0511 $(git ls-files '*.py')
+pylint_output=$(pylint --disable=W1203,C0114,C0116,W0201,W0621,W0511 $(git ls-files '*.py'))
+pylint_exit_code=$?
+
+echo "$pylint_output"
+
+if [ $pylint_exit_code -le 9 ]; then
+    echo "Linter passed with score ${pylint_exit_code}/10"
+else
+    echo "Linter failed with score ${pylint_exit_code}/10"
+    exit 1
+fi
 
 echo "Linter passed. Deactivating virtual environment..."
 
