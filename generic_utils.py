@@ -407,7 +407,7 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
 
     def __str__(self) -> str:
         return (
-            f'{self.notebook_name} in {self.workspace_name}'
+            f'{self.notebook_name} in {self.workspace_name} '
             f'executed by {self.job_id if self.job_id else self.pipeline_job_id}'
         )
 
