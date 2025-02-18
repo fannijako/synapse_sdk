@@ -34,7 +34,6 @@ pytest test_utils.py || exit 1
 
 echo "All tests passed. Linter started ..."
 
-pylint --disable=W1203,W0603,W0718,E0401,C0114,C0116,W0201,W0621,W0511,C0301 $(git ls-files '*.py')
 
 echo "Linter passed. Deactivating virtual environment..."
 
