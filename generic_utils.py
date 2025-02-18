@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from functools import cached_property
 from typing import Iterator, Tuple, Union
 
-import mssparkutils # type: ignore
+import mssparkutils # type: ignore # pylint: disable=import-error
 import pyspark.sql.functions as F # type: ignore
 
 from delta.tables import DeltaTable # type: ignore
@@ -193,7 +193,13 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
         super().__init__()
 
         self._workspace_name = mssparkutils.env.getWorkspaceName() # type: ignore
-        _, self._data_product_name, self._environment, self._data_product_version = self.workspace_name.split('-')
+        (
+            _,
+            self._data_product_name,
+            self._environment,
+            self._data_product_version
+        ) = self.workspace_name.split('-')
+
         self._construct_paths()
 
         self._notebook_name = mssparkutils.runtime.context.get('currentNotebookName') # type: ignore
@@ -289,7 +295,12 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
         self._construct_paths()
 
     def _construct_paths(self) -> None:
-        self._azure_storage_name = f"dls{self._data_product_name}{self._environment}{self._data_product_version}"
+        self._azure_storage_name = (
+            f"dls{self._data_product_name}"
+            f"{self._environment}"
+            f"{self._data_product_version}"
+            )
+
         self._curated_path = f"abfss://curated@{self._azure_storage_name}.dfs.core.windows.net"
         self._standardized_curated_path = f"{self._curated_path}/standardized"
         self._sensitive_standardized_curated_path = f"{self._curated_path}/sensitive-standardized"
@@ -322,8 +333,10 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
     @standardized_curated_path.setter
     def standardized_curated_path(self, value):
         raise UserWarning(f"""Standardized_curated_path can't be changed manually to {value}.
-                             Set the data_product_name, environment and data_product_version attributes
-                             and the standardized_curated_path attribute will be set accordingly.""")
+                             Set the data_product_name, environment and data_product_version 
+                             attributes and the standardized_curated_path attribute 
+                             will be set accordingly.
+                          """)
 
     @property
     def sensitive_standardized_curated_path(self):
@@ -331,9 +344,11 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
 
     @sensitive_standardized_curated_path.setter
     def sensitive_standardized_curated_path(self, value):
-        raise UserWarning(f"""Sensitive_standardized_curated_path can't be changed manually to {value}.
-                             Set the data_product_name, environment and data_product_version attributes
-                             and the sensitive_standardized_curated_path attribute will be set accordingly.""")
+        raise UserWarning(f"""Sensitive_standardized_curated_path can't be changed manually
+                          to {value}. Set the data_product_name, environment and
+                          data_product_version attributes and the
+                          sensitive_standardized_curated_path attribute will be set accordingly.
+                          """)
 
     @property
     def trusted_path(self):
@@ -381,10 +396,20 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
         same_pool = self.pool == other_notebook.pool
         same_cluster = self.cluster == other_notebook.cluster
 
-        return same_type and same_workspace_name and same_job_id and same_notebook_name and same_pipeline_job_id and same_pool and same_cluster
+        return (same_type
+                and same_workspace_name
+                and same_job_id
+                and same_notebook_name
+                and same_pipeline_job_id
+                and same_pool
+                and same_cluster
+                )
 
     def __str__(self) -> str:
-        return f'{self.notebook_name} in {self.workspace_name} executed by {self.job_id if self.job_id else self.pipeline_job_id}'
+        return (
+            f'{self.notebook_name} in {self.workspace_name}'
+            f'executed by {self.job_id if self.job_id else self.pipeline_job_id}'
+        )
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
@@ -453,7 +478,9 @@ class DataProduct(Notebook):
         _ = self.trusted_tables
 
     def __eq__(self, other_data_product) -> bool:
-        return isinstance(other_data_product, DataProduct) and self.azure_storage_name == other_data_product.azure_storage_name
+        same_type = isinstance(other_data_product, DataProduct)
+        same_name = self.azure_storage_name == other_data_product.azure_storage_name
+        return same_type and same_name
 
     def __contains__(self, table: str) -> bool:
         return table in self.curated_tables.keys() or table in self.trusted_tables.keys()
@@ -499,7 +526,8 @@ class DataProduct(Notebook):
 
         Example usage:
             DataProduct().vacuum_all()
-            Which runs a VACUUM command with 7 days retention on all delta tables in the curated layer.
+            Which runs a VACUUM command with 7 days retention
+            on all delta tables in the curated layer.
         """
 
         spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore # pylint: disable=undefined-variable
@@ -556,10 +584,14 @@ class DataPlaceholder(DataProduct):
         if self.name in self.trusted_tables and self.layer == 'trusted':
             return self.trusted_tables.get(self._name).get('url')
 
-        raise ValueError(f'Delta table with name {self.name} does not exist in the {self.layer} layer.')
+        raise ValueError(f'Delta table {self.name} does not exist in the {self.layer}.')
 
     def __eq__(self, other_table) -> bool:
-        return isinstance(other_table, DataPlaceholder) and super().__eq__(other_table) and self._name == other_table.name and self._layer == other_table.layer
+        same_type = isinstance(other_table, DataPlaceholder)
+        same_super = super().__eq__(other_table)
+        same_name = self._name == other_table.name
+        same_layer = self._layer == other_table.layer
+        return same_type and same_super and same_name and same_layer
 
 
 class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
@@ -617,7 +649,8 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
 
     def _get_load_type(self) -> str:
         """
-        Get the load type of the table based on the most common operation type of the last 20 versions
+        Get the load type of the table based on the most common
+        operation type of the last 20 versions
 
         Returns: str
             Full or scd1
@@ -675,12 +708,16 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         return f"{self.data_product_name} data product's {self._name} table in {self._layer} layer"
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(name='{self._name}', load_type={self.load_type}, layer={self._layer})"
+        type_name = type(self).__name__
+        return f"{type_name}(name='{self._name}', load_type={self.load_type}, layer={self._layer})"
 
     def vacuum(self, hours: int = 168, force: bool = False) -> None:
 
         if hours < 168 and not force:
-            raise UserWarning('It is not recommended to VACUUM a delta table with retention lower than 7 days. If you want to continue either way, set the force parameter to True.')
+            raise UserWarning("""It is not recommended to VACUUM a delta table with retention
+                              lower than 7 days. If you want to continue either way, set the
+                              force parameter to True.
+                              """)
 
         if hours < 168 and force:
             spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore # pylint: disable=undefined-variable
@@ -719,12 +756,16 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
 
         # Set the table properties, so that the upcoming writes are using the same target file sizes
         # Effects optimize, zorder, autoopzimite and autocompact
-        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.targetFileSize'='{self._target_file_size}')") # type: ignore # pylint: disable=undefined-variable
+        spark.sql(f"ALTER TABLE delta.`{self._path}`" # type: ignore # pylint: disable=undefined-variable
+                  f"SET TBLPROPERTIES ('delta.targetFileSize'='{self._target_file_size}')")
 
-        # Enable autooptimize, so that the later executions will write new files with target_file_size
-        spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')") # type: ignore # pylint: disable=undefined-variable
+        # Enable autooptimize for later write operations
+        spark.sql(f"ALTER TABLE delta.`{self._path}`" # type: ignore # pylint: disable=undefined-variable
+                  f"SET TBLPROPERTIES ('delta.autoOptimize.optimizeWrite'='true')")
 
-    def calculate_zorder_and_analyse_columns(self, primary_keys: list[str]) -> tuple[list[str], list[str]]:
+    def calculate_zorder_and_analyse_columns(self,
+                                             primary_keys: list[str]) -> tuple[list[str]]:
+
         """
         Select column candidates for Z-ORDER BY and ANALYZE from the primary keys
         Specifications for Z-ORDER BY:
@@ -743,7 +784,8 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
 
         Returns:
             list[str]: list of column names to use in Z-ORDERING.
-            list[str]: list of column names to calculate statistics about other than the Z-ORDERING columns.
+            list[str]: list of column names to calculate statistics
+                       about other than the Z-ORDERING columns.
         """
 
         nbr_rows = self._dataframe.count()
@@ -752,15 +794,18 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         analyse_columns = []
 
         for column in primary_keys:
-            # Calculate the distinct values in the current column and calculate its ratio over the number of rows
-            nbr_distinct = self._dataframe.agg(F.approx_count_distinct(column).alias('count')).collect()[0][0]
+            # Calculate the distinct values and its ratio in the current column
+            aggregated = self._dataframe.agg(F.approx_count_distinct(column).alias('count'))
+            nbr_distinct = aggregated.collect()[0][0]
             ratio = nbr_distinct / nbr_rows
 
-            # If the ratio is at least 0.01% and has at least 10 distinct values, add it to the possible z-ordering columns
+            # If the ratio is at least 0.01% and has at least 10 distinct values,
+            # add it to the possible z-ordering columns
             if ratio >= 0.0001 and nbr_distinct >= 10:
                 zorder_columns[column] = ratio
 
-            # If it is not added to the possible z-ordering columns but is not constant, add it to the analyse columns
+            # If it is not added to the possible z-ordering columns but is not constant,
+            # add it to the analyse columns
             elif nbr_distinct > 1:
                 analyse_columns.append(column)
 
@@ -775,7 +820,9 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         self.analyse_columns = analyse_columns
         return zorder_columns, analyse_columns
 
-    def calculate_statistics(self, primary_keys: list[str], alter_statistics_number: bool = False) -> tuple[str, str, int, int]:
+    def calculate_statistics(self,
+                             primary_keys: list[str],
+                             alter_statistics_number: bool = False) -> tuple[str, str, int, int]:
         """
         Calculate the following statistics:
             - z-order columns
@@ -786,27 +833,39 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         Args:
         path (str): path of the delta lake in abfss:// format.
         primary_keys (list[str]): list of primary keys of the table.
-        alter_statistics_number (bool, optional): whether to change the table property of delta.dataSkippingNumIndexedCols to the calculated nbr_column_statistics or not. Defaults to False.
+        alter_statistics_number (bool, optional): whether to change the table property
+            of delta.dataSkippingNumIndexedCols to the calculated nbr_column_statistics or not.
+            Defaults to False.
 
         Returns:
         str: column names to use in Z-ORDERING separated by ','. Defaults to ''.
-        str: column names to calculate statistics about other than the Z-ORDERING column separated by ','. Defaults to ''.
+        str: column names to calculate statistics about other than the Z-ORDERING 
+            column separated by ','.
+            Defaults to ''.
         int: number of columns to calculate statistics about. Defaults to 32.
         int: number of columns in the table. Defaults to 9999.
         """
 
         try:
-            zorder_columns, analyse_columns = self.calculate_zorder_and_analyse_columns(primary_keys)
+            (
+                zorder_columns,
+                analyse_columns
+            ) = self.calculate_zorder_and_analyse_columns(primary_keys)
 
             nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
             if alter_statistics_number:
-                spark.sql(f"ALTER TABLE delta.`{self._path}` SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'='{nbr_column_statistics}')") # type: ignore # pylint: disable=undefined-variable
+                spark.sql(f"ALTER TABLE delta.`{self._path}`" # type: ignore # pylint: disable=undefined-variable
+                          f"SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'="
+                          f"'{nbr_column_statistics}')")
 
             nbr_columns = len(self._dataframe.schema)
 
-            return ','.join(zorder_columns), ','.join(analyse_columns), nbr_column_statistics, nbr_columns
+            return (','.join(zorder_columns),
+                    ','.join(analyse_columns),
+                    nbr_column_statistics,
+                    nbr_columns)
 
-        except Exception:
+        except Exception: # pylint: disable=broad-exception-caught
             return '', '', 32, 9999
 
     def set_table_properties(self):
@@ -898,64 +957,87 @@ class LHTSparkDataFrame(DataPlaceholder):
 
     def __lt__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
-            raise ValueError('< operator only supported between different versions of the same table')
+            raise ValueError('< operator only supported between versions of the same table')
         return  self.version < other_dataframe.version
 
     def __le__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
-            raise ValueError('<= operator only supported between different versions of the same table')
+            raise ValueError('<= operator only supported between versions of the same table')
         return  self.version <= other_dataframe.version
 
     def __gt__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
-            raise ValueError('> operator only supported between different versions of the same table')
+            raise ValueError('> operator only supported between versions of the same table')
         return  self.version > other_dataframe.version
 
     def __ge__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
-            raise ValueError('>= operator only supported between different versions of the same table')
+            raise ValueError('>= operator only supported between versions of the same table')
         return  self.version >= other_dataframe.version
 
     def __add__(self, version_increase: int):
-        return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version + version_increase)
+        return LHTSparkDataFrame(name = self.name,
+                                 load_type = self.load_type,
+                                 layer = self.layer,
+                                 version = self.version + version_increase)
 
     def __sub__(self, version_decrease: int):
-        return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - version_decrease)
+        return LHTSparkDataFrame(name = self.name,
+                                 load_type = self.load_type,
+                                 layer = self.layer,
+                                 version = self.version - version_decrease)
 
     def __str__(self) -> str:
-        return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer as a dataframe for version {self.version}"
+        return (f"{self.data_product_name} data product's {self.name} table "
+                f"in {self.layer} layer as a dataframe for version {self.version}")
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, layer={self.layer}, version={self.version}, timestamp={self.timestamp})"
+        return (f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, "
+                f"layer={self.layer}, version={self.version}, timestamp={self.timestamp})")
 
     def load_dataframe(self) -> None:
         if not self.version and not self.timestamp:
             self.dataframe = spark.read.format('delta').load(self.path) # type: ignore # pylint: disable=undefined-variable
         elif self.version:
-            self.dataframe = spark.read.format('delta').option('versionAsOf', self.version).load(self.path) # type: ignore # pylint: disable=undefined-variable
+            self.dataframe = (spark.read.format('delta') # type: ignore # pylint: disable=undefined-variable
+                                   .option('versionAsOf', self.version)
+                                   .load(self.path))
         elif self.timestamp:
-            self.dataframe = spark.read.format('delta').option('timestampAsOf', self.timestamp).load(self.path) # type: ignore # pylint: disable=undefined-variable
+            self.dataframe = (spark.read.format('delta') # type: ignore # pylint: disable=undefined-variable
+                                   .option('timestampAsOf', self.timestamp)
+                                   .load(self.path))
 
     def get_version(self) -> int:
         return int(self.history(1).select('version').collect()[0][0]) # pylint: disable=no-member
 
     def load_version_minus_n(self, timetravel: int = 1):
-        return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
+        return LHTSparkDataFrame(name = self.name,
+                                 load_type = self.load_type,
+                                 layer = self.layer,
+                                 version = self.version - timetravel)
 
     def is_changed_since_last_version(self, columns_to_ignore: list = None) -> bool:
-        not_existing_columns = [col for col in columns_to_ignore if col not in self.dataframe.columns]
+        not_existing_columns = [col
+                                for col
+                                in columns_to_ignore
+                                if col not in self.dataframe.columns]
+
         if len(not_existing_columns) != 0:
-            raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe, with columns {self.dataframe.columns}')
+            raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe')
 
         version_minus_one = self.load_version_minus_n(timetravel = 1)
 
         current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct().count()
-        new_version_count_distinct = version_minus_one.dataframe.drop(*columns_to_ignore).distinct().count()
+        new_version_count_distinct = (version_minus_one.dataframe.drop(*columns_to_ignore)
+                                                                 .distinct()
+                                                                 .count())
 
         if current_version_count_distinct != new_version_count_distinct:
             return True
 
-        unioned_df = self.dataframe.drop(*columns_to_ignore).unionByName(version_minus_one.dataframe.drop(*columns_to_ignore))
+        unioned_df = (self.dataframe.drop(*columns_to_ignore)
+                                    .unionByName(version_minus_one.dataframe
+                                                        .drop(*columns_to_ignore)))
         unioned_count_distinct = unioned_df.distinct().count()
 
         return unioned_count_distinct != new_version_count_distinct
@@ -975,7 +1057,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         asql_database = AsqlDatabase(database_name, database_schema)
         table_name = table_name if table_name else self.name
-        connection_properties, url, dbtable = asql_database.build_connection_properties(database_table = table_name)
+        connection_properties, url, dbtable = asql_database.build_connection_properties(table_name)
         (self.dataframe.write
                        .option("createTableOptions", create_table_statement)
                        .jdbc(url = url,
@@ -991,17 +1073,25 @@ class LHTSparkDataFrame(DataPlaceholder):
         """
         raise NotImplementedError
 
-    def add_timestamp_column(self, timestamp_column_name: str = "load_timestamp", timezone: str = None, timestamp_format: str = 'yyyy-MM-dd HH:mm:ss') -> None:
+    def add_timestamp_column(self,
+                             timestamp_column_name: str = "load_timestamp",
+                             timezone: str = None,
+                             timestamp_format: str = 'yyyy-MM-dd HH:mm:ss') -> None:
+
         """
         Adds a timestamp column to a PySpark DataFrame with an optional timezone and custom format.
 
         Args:
-            timestamp_column_name (str, optional): the name for the new timestamp column. Defaults to 'load_timestamp'
-            timezone (str, optional): the timezone to which the timestamp will be converted. Defaults to None.
-            timestamp_format (str, optional): the format for the timestamp column. Defaults to 'yyyy-MM-dd HH:mm:ss'.
+            timestamp_column_name (str, optional): the name for the new timestamp column.
+                Defaults to 'load_timestamp'
+            timezone (str, optional): the timezone to which the timestamp will be converted.
+                Defaults to None.
+            timestamp_format (str, optional): the format for the timestamp column.
+                Defaults to 'yyyy-MM-dd HH:mm:ss'.
 
         Raises:
-            ValueError: if the provided column name already exists in the DataFrame to prevent value loss.
+            ValueError: if the provided column name already exists in the DataFrame
+            to prevent value loss.
         """
 
         if timestamp_column_name in self.dataframe.columns:
@@ -1025,18 +1115,22 @@ class LHTSparkDataFrame(DataPlaceholder):
 
     def add_hash_column(self, prefix: str = 'dap') -> None:
         """
-        Add a hash column to a Spark DataFrame by concatenating all columns and applying SHA-256 hashing.
-        The name of the hash column will be based on the provided prefix (e.g., 'dap_hash' for 'dap' prefix).
+        Add a hash column to a Spark DataFrame by concatenating all columns and
+        applying SHA-256 hashing. The name of the hash column will be based on 
+        the provided prefix (e.g., 'dap_hash' for 'dap' prefix).
 
-        This function concatenates all columns of the input DataFrame into a single string for each row,
-        applies SHA-256 hashing to these strings, and adds the hash as a new column. The name of this
+        This function concatenates all columns of the input DataFrame into a
+        single string for each row, applies SHA-256 hashing to these strings,
+        and adds the hash as a new column. The name of this
         new column is constructed using the given prefix followed by '_hash'.
 
         Parameters:
-            prefix (str, optional): The prefix for the hash column name. Defaults to 'dap'.
+            prefix (str, optional): The prefix for the hash column name.
+            Defaults to 'dap'.
 
         Raises:
-            ValueError: if the provided column name already exists in the DataFrame to prevent value loss.
+            ValueError: if the provided column name already exists in the DataFrame
+            to prevent value loss.
         """
 
         if f"{prefix}_hash" in self.dataframe.columns:
@@ -1055,7 +1149,8 @@ class LHTSparkDataFrame(DataPlaceholder):
         """
 
         for colname in self.dataframe.columns:
-            self.dataframe = self.dataframe.withColumnRenamed(colname, colname.replace(pattern_to_replace, replace_to))
+            new_name = colname.replace(pattern_to_replace, replace_to)
+            self.dataframe = self.dataframe.withColumnRenamed(colname,new_name )
 
     def rename_columns_w_mapping(self, column_names: dict) -> None:
         """
@@ -1084,8 +1179,8 @@ class LHTSparkDataFrame(DataPlaceholder):
                 }
         """
 
-        for column_name, column_type in column_types.items():
-            self.dataframe = self.dataframe.withColumn(column_name, F.col(column_name).cast(column_type))
+        for name, column_type in column_types.items():
+            self.dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
 
     @staticmethod
     def construct_merge_condition(pk: str, separator: str=',') -> str:
@@ -1094,7 +1189,8 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         Args:
             pk (str): The primary keys separated 
-            separator (str, optional): The separator between the primary keys. The default value is ','.
+            separator (str, optional): The separator between the primary keys.
+            The default value is ','.
         
         Returns:
             str: The merge condition.
@@ -1141,7 +1237,9 @@ class KeyVault(Notebook):
         self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
 
     def __eq__(self, other_keyvault) -> bool:
-        return isinstance(other_keyvault, KeyVault) and self.key_vault_name == other_keyvault.key_vault_name
+        same_type = isinstance(other_keyvault, KeyVault)
+        same_name = self.key_vault_name == other_keyvault.key_vault_name
+        return same_type and same_name
 
     def __str__(self) -> str:
         return f'Key Vault linked service {self.key_vault_name}'
@@ -1177,7 +1275,7 @@ class AsqlDatabase(Notebook):
     database_name = StringValue()
     database_schema = StringValue()
     database_server = StringValue()
-    asql_database_linked_service_name = StringValue()
+    linked_service_name = StringValue()
 
     def __init__(self, database_name: str, database_schema: str):
 
@@ -1186,8 +1284,13 @@ class AsqlDatabase(Notebook):
         self.database_name = database_name
         self.database_schema = database_schema
 
-        self.database_server = f'sql-{self.data_product_name}-we-{"nonprod" if self.environment == "d" else "prod"}.database.windows.net:1433'
-        self.asql_database_linked_service_name = f'ls_asql_{self.data_product_name}'
+        self.database_server = (
+            f'sql-{self.data_product_name}-we-'
+            f'{"nonprod" if self.environment == "d" else "prod"}'
+            f'.database.windows.net:1433'
+            )
+
+        self.linked_service_name = f'ls_asql_{self.data_product_name}'
 
     def __eq__(self, other_database) -> bool:
 
@@ -1195,18 +1298,29 @@ class AsqlDatabase(Notebook):
         same_database_server = self.database_server == other_database.database_server
         same_database_name = self.database_name == other_database.database_name
         same_database_schema = self.database_schema == other_database.database_schema
-        same_asql_database_linked_service_name = self.asql_database_linked_service_name == other_database.asql_database_linked_service_name
+        same_name = self.linked_service_name == other_database.linked_service_name
 
-        return same_type and same_database_server and same_database_name and same_database_schema and same_asql_database_linked_service_name
+        return (
+            same_type
+            and same_database_server
+            and same_database_name
+            and same_database_schema
+            and same_name
+            )
 
     def __str__(self) -> str:
-        return f'Azure SQL database linked service to the {self.database_schema} in {self.database_name} database'
+        return (
+            f'Azure SQL database linked service to the {self.database_schema}'
+            f'in {self.database_name} database'
+            )
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(database_name='{self.database_name}', database_schema={self.database_schema})"
+        type_name = type(self).__name__
+        attributes = f"database_name='{self.database_name}', database_schema={self.database_schema}"
+        return f"{type_name}({attributes})"
 
     def get_token(self) -> str:
-        return TokenLibrary.getConnectionString(self.asql_database_linked_service_name) # type: ignore # pylint: disable=undefined-variable
+        return TokenLibrary.getConnectionString(self.linked_service_name) # type: ignore # pylint: disable=undefined-variable
 
     def build_connection_properties(self, database_table: str) -> Tuple[dict, str, str]:
 
