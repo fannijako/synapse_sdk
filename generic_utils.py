@@ -708,7 +708,7 @@ class Table(DataPlaceholder):
         raise NotImplementedError
 
 
-class DataFrame(DataPlaceholder):
+class LHTSparkDataFrame(DataPlaceholder):
     file_format = 'delta'
     version = PositiveNumber()
     timestamp = StringOrNoneValue()
@@ -730,38 +730,38 @@ class DataFrame(DataPlaceholder):
 
     def __eq__(self, other_dataframe) -> bool:
 
-        same_type = isinstance(other_dataframe, DataFrame)
+        same_type = isinstance(other_dataframe, LHTSparkDataFrame)
         same_super = super().__eq__(other_dataframe)
         same_version = self.version == other_dataframe.version
         same_timestamp = self.timestamp == other_dataframe.timestamp
 
         return same_type and same_super and same_version and same_timestamp
 
-    def __lt__(self, other_dataframe: DataFrame) -> bool:
+    def __lt__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
             raise ValueError('< operator only supported between different versions of the same table')
         return  self.version < other_dataframe.version
 
-    def __le__(self, other_dataframe: DataFrame) -> bool:
+    def __le__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
             raise ValueError('<= operator only supported between different versions of the same table')
         return  self.version <= other_dataframe.version
 
-    def __gt__(self, other_dataframe: DataFrame) -> bool:
+    def __gt__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
             raise ValueError('> operator only supported between different versions of the same table')
         return  self.version > other_dataframe.version
 
-    def __ge__(self, other_dataframe: DataFrame) -> bool:
+    def __ge__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
             raise ValueError('>= operator only supported between different versions of the same table')
         return  self.version >= other_dataframe.version
 
-    def __add__(self, version_increase: int) -> DataFrame:
-        return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version + version_increase)
+    def __add__(self, version_increase: int):
+        return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version + version_increase)
     
-    def __sub__(self, version_decrease: int) -> DataFrame:
-        return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - version_decrease)
+    def __sub__(self, version_decrease: int):
+        return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - version_decrease)
 
     def __str__(self) -> str:
         return f"{self.data_product_name} data product's {self.name} table in {self.layer} layer as a dataframe for version {self.version}"
@@ -780,8 +780,8 @@ class DataFrame(DataPlaceholder):
     def get_version(self) -> int:
         return int(self.history(1).select('version').collect()[0][0])
 
-    def load_version_minus_n(self, timetravel: int = 1) -> DataFrame:
-        return DataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
+    def load_version_minus_n(self, timetravel: int = 1):
+        return LHTSparkDataFrame(name = self.name, load_type = self.load_type, layer = self.layer, version = self.version - timetravel)
 
     def is_changed_since_last_version(self, columns_to_ignore: list = None) -> bool:
         not_existing_columns = [col for col in columns_to_ignore if col not in self.dataframe.columns]
