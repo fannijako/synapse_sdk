@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 # Variables that needs to be customized for the use case
 REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DAP-TISC/_git/lhtdap-tisc-syn"
