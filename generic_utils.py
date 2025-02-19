@@ -727,6 +727,7 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
             spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false") # type: ignore # pylint: disable=undefined-variable
 
         self._delta_table.vacuum(retentionHours = hours)
+        spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "true") # type: ignore # pylint: disable=undefined-variable
 
     def zorder(self, columns: list, partition_filter: str = None) -> None:
 
