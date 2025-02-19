@@ -590,7 +590,7 @@ class DataPlaceholder(DataProduct):
         return self._path
 
     def _string_or_none_value_handle_attribute_change(self):
-        raise UserWarning("Load type attribute can't be changed.")
+        pass
 
     def _find_path(self) -> Tuple[str, str, str]:
         if self.name in self.curated_tables and self.layer == 'curated':
