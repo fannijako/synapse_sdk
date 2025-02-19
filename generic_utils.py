@@ -627,6 +627,8 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         calculate_enforce_save_target_table_metadata
         calculate_zorder_and_analyse_columns
         calculate_statistics
+        set_table_properties
+        get_optimization_recommendations
     """
 
     table_size = PositiveNumber()
@@ -635,7 +637,6 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
         super().__init__(name = name, load_type = load_type, layer = layer)
         self.calculate_table_properties()
-        self.calculate_enforce_save_target_table_metadata()
 
     def calculate_table_properties(self):
         self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore # pylint: disable=undefined-variable
@@ -791,7 +792,7 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
                        about other than the Z-ORDERING columns.
         """
 
-        if len(primary_keys) == 0:
+        if not primary_keys:
             primary_keys = self._dataframe.columns
 
         nbr_rows = self._dataframe.count()
@@ -827,64 +828,40 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         return zorder_columns, analyse_columns
 
     def calculate_statistics(self,
-                             primary_keys: list[str],
-                             alter_statistics_number: bool = False) -> tuple[str, str, int, int]:
+                             primary_keys: list[str] = None) -> tuple[str, str, int, int]:
         """
         Calculate the following statistics:
             - z-order columns
             - analyse columns
             - number of columns to calculate statistics on
-            - number of columns
         
         Args:
-        path (str): path of the delta lake in abfss:// format.
         primary_keys (list[str]): list of primary keys of the table.
-        alter_statistics_number (bool, optional): whether to change the table property
-            of delta.dataSkippingNumIndexedCols to the calculated nbr_column_statistics or not.
-            Defaults to False.
-
-        Returns:
-        str: column names to use in Z-ORDERING separated by ','. Defaults to ''.
-        str: column names to calculate statistics about other than the Z-ORDERING 
-            column separated by ','.
-            Defaults to ''.
-        int: number of columns to calculate statistics about. Defaults to 32.
-        int: number of columns in the table. Defaults to 9999.
         """
 
-        try:
-            (
-                zorder_columns,
-                analyse_columns
-            ) = self.calculate_zorder_and_analyse_columns(primary_keys)
 
-            nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
-            if alter_statistics_number:
-                spark.sql(f"ALTER TABLE delta.`{self._path}`" # type: ignore # pylint: disable=undefined-variable
-                          f"SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'="
-                          f"'{nbr_column_statistics}')")
+        (
+            zorder_columns,
+            analyse_columns
+        ) = self.calculate_zorder_and_analyse_columns(primary_keys)
 
-            nbr_columns = len(self._dataframe.schema)
+        # TODO: set the zorder columns as table properties and use it in the zorder method
+        # TODO: reorder columns, so that the picked ones are the firsts
 
-            return (','.join(zorder_columns),
-                    ','.join(analyse_columns),
-                    nbr_column_statistics,
-                    nbr_columns)
-
-        except Exception: # pylint: disable=broad-exception-caught
-            return '', '', 32, 9999
+        nbr_column_statistics = len(zorder_columns) + len(analyse_columns)
+        spark.sql(f"ALTER TABLE delta.`{self._path}`" # type: ignore # pylint: disable=undefined-variable
+                  f"SET TBLPROPERTIES ('delta.dataSkippingNumIndexedCols'="
+                  f"'{nbr_column_statistics}')")
 
     def set_table_properties(self):
-        """
-        Using the previous methods
-        """
-        raise NotImplementedError
+        self.calculate_enforce_save_target_table_metadata()
+        self.calculate_statistics()
 
     def get_optimization_recommendations(self):
         """
         E.g. run an optimize, run a vacuum or use the following spark configs while reading
         """
-        raise NotImplementedError
+        print("Run set_table_properties to set the delta tableproperties.")
 
 
 class LHTSparkDataFrame(DataPlaceholder):
