@@ -698,9 +698,9 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
 
         if size_in_gb < 10:
             target_file_size = '128mb'
-        if size_in_gb < 3072:
+        elif size_in_gb < 3072:
             target_file_size = '256mb'
-        if size_in_gb < 10240:
+        elif size_in_gb < 10240:
             target_file_size = '526mb'
         else:
             target_file_size = '1024mb'
