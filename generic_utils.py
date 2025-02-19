@@ -753,11 +753,8 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
 
     def calculate_enforce_save_target_table_metadata(self) -> None:
         """
-        Get the target Delta Lake table size in MB and 
-        calculate the target file size, enforce it for rewrites and save the result to a json
-        Enforce the target file size for this optimize  and for later writes
-        with table property setting delta.targetFileSize
-        Enable autoOptimize and autoCompact for setting the data layout for upcoming writes
+        Set the table properties of the table to the targetFileSize and
+        enable autooptimize.optimizeWrite for later writes
         """
 
         # Set the table properties, so that the upcoming writes are using the same target file sizes
@@ -793,6 +790,9 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
             list[str]: list of column names to calculate statistics
                        about other than the Z-ORDERING columns.
         """
+
+        if len(primary_keys) == 0:
+            primary_keys = self._dataframe.columns
 
         nbr_rows = self._dataframe.count()
 
