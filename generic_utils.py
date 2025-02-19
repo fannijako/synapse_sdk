@@ -943,9 +943,8 @@ class LHTSparkDataFrame(DataPlaceholder):
         same_type = isinstance(other_dataframe, LHTSparkDataFrame)
         same_super = super().__eq__(other_dataframe)
         same_version = self.version == other_dataframe.version
-        same_timestamp = self.timestamp == other_dataframe.timestamp
 
-        return same_type and same_super and same_version and same_timestamp
+        return same_type and same_super and same_version
 
     def __lt__(self, other_dataframe) -> bool:
         if not super().__eq__(other_dataframe):
