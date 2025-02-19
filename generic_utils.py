@@ -26,9 +26,10 @@ class PositiveNumber:
         return instance.__dict__[self._name]
 
     def __set__(self, instance, value):
-        if not isinstance(value, int | float | None) or value <= 0:
+        if (isinstance(value, int | float) and value > 0) or value is None:
+            instance.__dict__[self._name] = value
+        else:
             raise TypeError("positive number expected")
-        instance.__dict__[self._name] = value
 
 
 class StringValue:
