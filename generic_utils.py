@@ -926,6 +926,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         super().__init__(name = name, load_type = load_type, layer = layer)
 
         self._delta_table = Table(name = self.name, load_type = self.load_type, layer = self.layer)
+        self.load_type = self._delta_table.load_type
         self.latest_version = self.get_version()
         self.version = version
         self.timestamp = timestamp
