@@ -32,7 +32,7 @@ class PositiveNumber:
         else:
             raise TypeError("positive number expected")
 
-        if instance is not None:
+        if instance is not None and value is not None:
             instance._positive_number_handle_attribute_change()
 
 
@@ -69,7 +69,7 @@ class StringOrNoneValue:
             raise TypeError("string expected")
         instance.__dict__[self._name] = value
 
-        if instance is not None:
+        if instance is not None and value is not None:
             instance._string_or_none_value_handle_attribute_change()
 
 
