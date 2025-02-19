@@ -861,7 +861,7 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         """
         E.g. run an optimize, run a vacuum or use the following spark configs while reading
         """
-        print("Run set_table_properties to set the delta tableproperties.")
+        print("Run set_table_properties to set the delta table properties.")
 
 
 class LHTSparkDataFrame(DataPlaceholder):
@@ -910,7 +910,8 @@ class LHTSparkDataFrame(DataPlaceholder):
     version = PositiveNumber()
     timestamp = StringOrNoneValue()
 
-    def __init__(self, name: str, # pylint: disable=too-many-positional-arguments, too-many-arguments
+    def __init__(self, # pylint: disable=too-many-positional-arguments, too-many-arguments
+                 name: str,
                  load_type: str = None,
                  layer: str = 'curated',
                  version: int = None,
@@ -923,11 +924,16 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         super().__init__(name = name, load_type = load_type, layer = layer)
 
+        self._delta_table = Table(name = self.name, load_type = self.load_type, layer = self.layer)
         self.latest_version = self.get_version()
         self.version = version
         self.timestamp = timestamp
 
         self.load_dataframe()
+
+    @property
+    def delta_table(self):
+        return self._delta_table
 
     def __eq__(self, other_dataframe) -> bool:
 
@@ -991,7 +997,7 @@ class LHTSparkDataFrame(DataPlaceholder):
                                    .load(self.path))
 
     def get_version(self) -> int:
-        return int(self.history(1).select('version').collect()[0][0]) # pylint: disable=no-member
+        return int(self._delta_table.history(1).select('version').collect()[0][0]) # pylint: disable=no-member
 
     def load_version_minus_n(self, timetravel: int = 1):
         return LHTSparkDataFrame(name = self.name,
@@ -1210,7 +1216,6 @@ class KeyVault(Notebook):
         __eq__
         __str__
         __repr__
-        get_secret
     """
 
     key_vault_name = StringValue()
