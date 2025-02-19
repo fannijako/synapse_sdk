@@ -918,8 +918,6 @@ class LHTSparkDataFrame(DataPlaceholder):
                  version: int = None,
                  timestamp: str = None):
 
-        if not isinstance(timestamp, str | None):
-            raise TypeError('String expected for timestamp.')
         if version and timestamp:
             raise ValueError("Can't set both version and timestamp")
 
@@ -932,6 +930,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         self.timestamp = timestamp
 
         self.load_dataframe()
+        self.version = self.version if self.version else self.latest_version
 
     @property
     def delta_table(self):
