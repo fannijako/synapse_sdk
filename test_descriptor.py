@@ -13,6 +13,12 @@ class TestClass: # pylint: disable=too-few-public-methods,missing-class-docstrin
     string = StringValue()
     stringOrNone = StringOrNoneValue()
 
+    def _positive_number_handle_attribute_change(self):
+        pass
+
+    def _string_or_none_value_handle_attribute_change(self):
+        pass
+
 @pytest.fixture
 def instance():
     return TestClass()
@@ -30,8 +36,8 @@ def test_negative_number_assignment_to_positive_number(instance):
         instance.number = -5
 
 def test_zero_assignment_to_positive_number(instance):
-    with pytest.raises(TypeError, match="positive number expected"):
-        instance.number = 0
+    instance.number = 0
+    assert instance.number == 0, "0 can't be assigned to PositiveNumber."
 
 def test_non_numeric_assignment_to_positive_number(instance):
     with pytest.raises(TypeError, match="positive number expected"):

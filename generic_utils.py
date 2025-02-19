@@ -12,6 +12,7 @@ import pyspark.sql.functions as F # type: ignore
 
 from delta.tables import DeltaTable # type: ignore
 from py4j.java_gateway import Py4JJavaError  # type: ignore
+from pyspark.sql import DataFrame  # type: ignore
 
 
 class PositiveNumber:
@@ -26,10 +27,13 @@ class PositiveNumber:
         return instance.__dict__[self._name]
 
     def __set__(self, instance, value):
-        if (isinstance(value, int | float) and value > 0) or value is None:
+        if (isinstance(value, int | float) and value >= 0) or value is None:
             instance.__dict__[self._name] = value
         else:
             raise TypeError("positive number expected")
+
+        if instance is not None:
+            instance._positive_number_handle_attribute_change()
 
 
 class StringValue:
@@ -64,6 +68,9 @@ class StringOrNoneValue:
         if not isinstance(value, str | None):
             raise TypeError("string expected")
         instance.__dict__[self._name] = value
+
+        if instance is not None:
+            instance._string_or_none_value_handle_attribute_change()
 
 
 class Utils():
@@ -582,6 +589,9 @@ class DataPlaceholder(DataProduct):
     def path(self):
         return self._path
 
+    def _string_or_none_value_handle_attribute_change(self):
+        raise UserWarning("Load type attribute can't be changed.")
+
     def _find_path(self) -> Tuple[str, str, str]:
         if self.name in self.curated_tables and self.layer == 'curated':
             return self.curated_tables.get(self._name).get('url')
@@ -653,6 +663,10 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
     @property
     def dataframe(self):
         return self._dataframe
+
+    def _positive_number_handle_attribute_change(self):
+        self.target_file_size = self.calculate_target_file_size()
+        self.calculate_enforce_save_target_table_metadata()
 
     def _get_load_type(self) -> str:
         """
@@ -918,23 +932,32 @@ class LHTSparkDataFrame(DataPlaceholder):
                  version: int = None,
                  timestamp: str = None):
 
-        if version and timestamp:
-            raise ValueError("Can't set both version and timestamp")
-
         super().__init__(name = name, load_type = load_type, layer = layer)
+
+        self.version = version
+        self.timestamp = timestamp
 
         self._delta_table = Table(name = self.name, load_type = self.load_type, layer = self.layer)
         self.load_type = self._delta_table.load_type
         self.latest_version = self.get_version()
-        self.version = version
-        self.timestamp = timestamp
 
-        self.load_dataframe()
-        self.version = self.version if self.version else self.latest_version
+        self._dataframe, self.version, self.timestamp = self.load_dataframe()
 
     @property
     def delta_table(self):
         return self._delta_table
+
+    @property
+    def dataframe(self):
+        return self._dataframe
+
+    def _positive_number_handle_attribute_change(self):
+        self.timestamp = None
+        self._dataframe, self.version, self.timestamp = self.load_dataframe()
+
+    def _string_or_none_value_handle_attribute_change(self):
+        self.version = None
+        self._dataframe, self.version, self.timestamp = self.load_dataframe()
 
     def __eq__(self, other_dataframe) -> bool:
 
@@ -985,17 +1008,44 @@ class LHTSparkDataFrame(DataPlaceholder):
         return (f"{type(self).__name__}(name='{self.name}', load_type={self.load_type}, "
                 f"layer={self.layer}, version={self.version}, timestamp={self.timestamp})")
 
-    def load_dataframe(self) -> None:
-        if not self.version and not self.timestamp:
-            self.dataframe = spark.read.format('delta').load(self.path) # type: ignore # pylint: disable=undefined-variable
-        elif self.version:
-            self.dataframe = (spark.read.format('delta') # type: ignore # pylint: disable=undefined-variable
-                                   .option('versionAsOf', self.version)
-                                   .load(self.path))
-        elif self.timestamp:
-            self.dataframe = (spark.read.format('delta') # type: ignore # pylint: disable=undefined-variable
-                                   .option('timestampAsOf', self.timestamp)
-                                   .load(self.path))
+    def load_dataframe(self) -> tuple[DataFrame, int, str]:
+        if self.version and self.timestamp:
+            raise ValueError("Can't set both version and timestamp")
+
+        if self.version:
+            df = (spark.read.format('delta') # type: ignore # pylint: disable=undefined-variable
+                              .option('versionAsOf', self.version)
+                              .load(self.path))
+            version = self.version
+            timestamp = self.get_timestamp_of_version()
+            return df, version, timestamp
+
+        if self.timestamp:
+            df = (spark.read.format('delta') # type: ignore # pylint: disable=undefined-variable
+                            .option('timestampAsOf', self.timestamp)
+                            .load(self.path))
+            version = self.get_version_of_timestamp()
+            timestamp = self.timestamp
+            return df, version, timestamp
+
+        df = spark.read.format('delta').load(self.path) # type: ignore # pylint: disable=undefined-variable
+        version = self.latest_version
+        timestamp = self.get_previous_date(0)
+        return df, version, timestamp
+
+    def get_timestamp_of_version(self) -> str:
+        return (self.delta_table
+                    .history(100)
+                    .filter(F.col('version') == self.version)
+                    .select('timestamp')
+                    .collect()[0][0].strftime('%Y-%m-%d %H:%M:%S'))
+
+    def get_version_of_timestamp(self) -> int:
+        return (self.delta_table
+                    .history(100)
+                    .filter(F.col('timestamp') >= self.timestamp)
+                    .select(F.min('version'))
+                    .collect()[0][0])
 
     def get_version(self) -> int:
         return int(self._delta_table.history(1).select('version').collect()[0][0]) # pylint: disable=no-member
