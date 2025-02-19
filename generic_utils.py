@@ -1026,7 +1026,7 @@ class LHTSparkDataFrame(DataPlaceholder):
                     .collect()[0][0])
 
     def get_version(self) -> int:
-        return int(self._delta_table.history(1).select('version').collect()[0][0]) # pylint: disable=no-member
+        return int(self._delta_table.history(1).select('version').collect()[0][0])
 
     def load_version_minus_n(self, timetravel: int = 1):
         return LHTSparkDataFrame(name = self.name,
@@ -1084,12 +1084,6 @@ class LHTSparkDataFrame(DataPlaceholder):
                              properties=connection_properties
                             )
                     )
-
-    def rename_columns(self):
-        """
-        From generic utils
-        """
-        raise NotImplementedError
 
     def add_timestamp_column(self,
                              timestamp_column_name: str = "load_timestamp",
