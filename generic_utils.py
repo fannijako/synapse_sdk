@@ -635,6 +635,7 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
     def __init__(self, name: str, load_type: str = None, layer: str = 'curated'):
         super().__init__(name = name, load_type = load_type, layer = layer)
         self.calculate_table_properties()
+        self.calculate_enforce_save_target_table_metadata()
 
     def calculate_table_properties(self):
         self._delta_table = DeltaTable.forPath(spark, self.path) # type: ignore # pylint: disable=undefined-variable
