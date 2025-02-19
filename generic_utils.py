@@ -32,9 +32,6 @@ class PositiveNumber:
         else:
             raise TypeError("positive number expected")
 
-        if instance is not None and value is not None:
-            instance._positive_number_handle_attribute_change()
-
 
 class StringValue:
     """
@@ -68,9 +65,6 @@ class StringOrNoneValue:
         if not isinstance(value, str | None):
             raise TypeError("string expected")
         instance.__dict__[self._name] = value
-
-        if instance is not None and value is not None:
-            instance._string_or_none_value_handle_attribute_change()
 
 
 class Utils():
@@ -589,9 +583,6 @@ class DataPlaceholder(DataProduct):
     def path(self):
         return self._path
 
-    def _string_or_none_value_handle_attribute_change(self):
-        pass
-
     def _find_path(self) -> Tuple[str, str, str]:
         if self.name in self.curated_tables and self.layer == 'curated':
             return self.curated_tables.get(self._name).get('url')
@@ -663,10 +654,6 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
     @property
     def dataframe(self):
         return self._dataframe
-
-    def _positive_number_handle_attribute_change(self):
-        self.target_file_size = self.calculate_target_file_size()
-        self.calculate_enforce_save_target_table_metadata()
 
     def _get_load_type(self) -> str:
         """
@@ -950,14 +937,6 @@ class LHTSparkDataFrame(DataPlaceholder):
     @property
     def dataframe(self):
         return self._dataframe
-
-    def _positive_number_handle_attribute_change(self):
-        self.timestamp = None
-        self._dataframe, self.version, self.timestamp = self.load_dataframe()
-
-    def _string_or_none_value_handle_attribute_change(self):
-        self.version = None
-        self._dataframe, self.version, self.timestamp = self.load_dataframe()
 
     def __eq__(self, other_dataframe) -> bool:
 

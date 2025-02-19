@@ -13,11 +13,6 @@ class TestClass: # pylint: disable=too-few-public-methods,missing-class-docstrin
     string = StringValue()
     stringOrNone = StringOrNoneValue()
 
-    def _positive_number_handle_attribute_change(self):
-        pass
-
-    def _string_or_none_value_handle_attribute_change(self):
-        pass
 
 @pytest.fixture
 def instance():
