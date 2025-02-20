@@ -7,7 +7,7 @@ REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DA
 BRANCH_NAME="fj/ahornboden/modularized_generic"
 COMMIT_MESSAGE="automatically commited by commit.sh"
 
-FILES=("generic_utils.py" "vacuum_notebook.py" "test_asql_database.py")
+FILES=("generic_utils.py" "vacuum_notebook.py" "test_asql_database.py" "test_azureml.py")
 
 # Additional variables
 PYTHON_VERSION="python3"
