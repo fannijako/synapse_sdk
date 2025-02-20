@@ -15,7 +15,9 @@ def create_test_delta(notebook):
 
     path = f'{notebook.curated_path}/generic_utils/integration_test'
     test_curated_location = f'{path}/test_delta_listing_curated.delta'
-    test_trusted_location = f'{notebook.trusted_path}/test_delta_listing_trusted.delta'
+
+    path = f'{notebook.trusted_path}/generic_utils/integration_test'
+    test_trusted_location = f'{path}/test_delta_listing_trusted.delta'
 
     (spark.createDataFrame(data, ["name", "age", "salary", "department"]) # type: ignore # pylint: disable=undefined-variable
           .write.format("delta")
