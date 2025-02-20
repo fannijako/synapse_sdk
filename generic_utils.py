@@ -1315,7 +1315,7 @@ class AsqlDatabase(Notebook):
     def __str__(self) -> str:
         return (
             f'Azure SQL database linked service to the {self.database_schema}'
-            f'in {self.database_name} database'
+            f' in {self.database_name} database within the {self.database_server}'
             )
 
     def __repr__(self) -> str:
