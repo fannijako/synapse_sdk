@@ -3,8 +3,6 @@
 # TODO: cleanup docstring structure and length
 # TODO: update class doscstrings
 
-# TODO: synapse test notebooks to py files
-# TODO: generate master notebook from py file
 # TODO: generate the testing pipeline with py files
 # TODO: generate the alerting pipeline with py files
 
