@@ -7,7 +7,7 @@ REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DA
 BRANCH_NAME="fj/ahornboden/modularized_generic"
 COMMIT_MESSAGE="automatically commited by commit.sh"
 
-FILES=("generic_utils.py" "vacuum_notebook.py" "test_helper.py" "test_asql_database.py" "test_azureml.py" "test_data_product.py" "test_keyvault.py" "test_kusto.py" "test_synstorage.py")
+FILES=("generic_utils.py" "vacuum_notebook.py" "test_helper.py" "test_asql_database.py" "test_azureml.py" "test_data_product.py" "test_keyvault.py" "test_kusto.py" "test_synstorage.py" "test_utils.py")
 
 # Additional variables
 PYTHON_VERSION="python3"
@@ -30,7 +30,7 @@ pip install -r requirements.txt
 echo "Requirements installed for the tests. Starting the pytests..."
 
 pytest test_descriptor.py || exit 1
-pytest test_utils.py || exit 1
+pytest test_utils_local.py || exit 1
 
 echo "All tests passed. Linter started ..."
 
