@@ -450,13 +450,12 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
         previous_value.append(value)
         cls.exit_values[key] = previous_value
 
-    def get_connection_string_or_creds(self):
+    def get_connection_string_or_creds(self) -> str:
         if hasattr(self, 'linked_service_name'):
-            mssparkutils.credentials.getConnectionStringOrCreds(self.linked_service_name) # type: ignore # pylint: disable=line-too-long
-        else:
-            raise NotImplementedError('get_connection_string_or_creds can only be called on '
-                                      'subclasses of Notebook with an attribute named'
-                                      ' linked_service_name')
+            return mssparkutils.credentials.getConnectionStringOrCreds(self.linked_service_name) # type: ignore # pylint: disable=line-too-long
+        raise NotImplementedError('get_connection_string_or_creds can only be called on '
+                                  'subclasses of Notebook with an attribute named'
+                                  ' linked_service_name')
 
     def exit(self) -> None:
         """
