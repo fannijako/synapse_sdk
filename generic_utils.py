@@ -1011,21 +1011,19 @@ class LHTSparkDataFrame(DataPlaceholder):
         return df, version, timestamp
 
     def get_timestamp_of_version(self) -> str:
-        return (self.delta_table
-                    .history(100)
+        return (self.history(100)
                     .filter(F.col('version') == self.version)
                     .select('timestamp')
                     .collect()[0][0].strftime('%Y-%m-%d %H:%M:%S'))
 
     def get_version_of_timestamp(self) -> int:
-        return (self.delta_table
-                    .history(100)
+        return (self.history(100)
                     .filter(F.col('timestamp') >= self.timestamp)
                     .select(F.min('version'))
                     .collect()[0][0])
 
     def get_latest_version(self) -> int:
-        return int(self._delta_table.history(1).select('version').collect()[0][0])
+        return int(self.history(1).select('version').collect()[0][0])
 
     def is_changed_since_last_version(self, columns_to_ignore: list = None) -> bool:
         not_existing_columns = [col
@@ -1036,9 +1034,25 @@ class LHTSparkDataFrame(DataPlaceholder):
         if len(not_existing_columns) != 0:
             raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe')
 
-        version_minus_one = self - 1
+        metadata = self.history(1).select('operation', 'operationMetrics').collect()[0]
+        if metadata.operation == 'MERGE':
+            return (metadata.operationMetrics.get('numOutputRows') == '0'
+                    and metadata.operationMetrics.get('numTargetRowsInserted') == '0'
+                    and metadata.operationMetrics.get('numTargetFilesAdded') == '0'
+                    and metadata.operationMetrics.get('numTargetFilesRemoved') == '0'
+                    and metadata.operationMetrics.get('numTargetRowsCopied') == '0'
+                    and metadata.operationMetrics.get('numTargetRowsUpdated') == '0'
+                    and metadata.operationMetrics.get('numTargetRowsDeleted') == '0'
+                    and metadata.operationMetrics.get('numSourceRows') == '0'
+                    and metadata.operationMetrics.get('numTargetChangeFilesAdded') == '0'
+                    )
 
+        current_version_count = self.dataframe.count()
         current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct().count()
+        if current_version_count_distinct != current_version_count:
+            return True # TODO: raise warning that this might be false
+
+        version_minus_one = self - 1
         new_version_count_distinct = (version_minus_one.dataframe.drop(*columns_to_ignore)
                                                                  .distinct()
                                                                  .count())
@@ -1186,6 +1200,9 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         for name, column_type in column_types.items():
             self.dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
+
+    def history(self, limit: int = 10):
+        return self.delta_table.history(limit)
 
     @staticmethod
     def construct_merge_condition(primary_keys: list,
