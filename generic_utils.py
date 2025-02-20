@@ -1,4 +1,4 @@
- # pylint: disable=too-many-lines
+# pylint: disable=too-many-lines
 # TODO: move the classes to files
 
 import json
@@ -896,7 +896,6 @@ class LHTSparkDataFrame(DataPlaceholder):
         __sub__
         load_dataframe
         get_version
-        load_version_minus_n
         is_changed_since_last_version
         write_to_database
         add_timestamp_column
@@ -1028,12 +1027,6 @@ class LHTSparkDataFrame(DataPlaceholder):
     def get_version(self) -> int:
         return int(self._delta_table.history(1).select('version').collect()[0][0])
 
-    def load_version_minus_n(self, timetravel: int = 1):
-        return LHTSparkDataFrame(name = self.name,
-                                 load_type = self.load_type,
-                                 layer = self.layer,
-                                 version = self.version - timetravel)
-
     def is_changed_since_last_version(self, columns_to_ignore: list = None) -> bool:
         not_existing_columns = [col
                                 for col
@@ -1043,7 +1036,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         if len(not_existing_columns) != 0:
             raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe')
 
-        version_minus_one = self.load_version_minus_n(timetravel = 1)
+        version_minus_one = self.dataframe - 1
 
         current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct().count()
         new_version_count_distinct = (version_minus_one.dataframe.drop(*columns_to_ignore)
@@ -1232,7 +1225,7 @@ class KeyVault(Notebook):
     Subclass of Notebook
 
     Attributes:
-        key_vault_name
+        linked_service_name
     
     Methods:
         __init__
@@ -1241,19 +1234,19 @@ class KeyVault(Notebook):
         __repr__
     """
 
-    key_vault_name = StringValue()
+    linked_service_name = StringValue()
 
     def __init__(self):
         super().__init__()
-        self.key_vault_name = f'kv{self.data_product_name}{self.data_product_version}'
+        self.linked_service_name = f'kv{self.data_product_name}{self.data_product_version}'
 
     def __eq__(self, other_keyvault) -> bool:
         same_type = isinstance(other_keyvault, KeyVault)
-        same_name = self.key_vault_name == other_keyvault.key_vault_name
+        same_name = self.linked_service_name == other_keyvault.linked_service_name
         return same_type and same_name
 
     def __str__(self) -> str:
-        return f'Key Vault linked service {self.key_vault_name}'
+        return f'Key Vault linked service {self.linked_service_name}'
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
@@ -1272,7 +1265,7 @@ class AsqlDatabase(Notebook):
         database_name
         database_schema
         database_server
-        asql_database_linked_service_name
+        linked_service_name
     
     Methods:
         __init__
@@ -1348,3 +1341,102 @@ class AsqlDatabase(Notebook):
             }
 
         return connection_properties, url, dbtable
+
+
+class AzureMachineLearningWorkspace(Notebook):
+    """
+    AzureMachineLearningWorkspace
+    Subclass of Notebook
+
+    Attributes:
+        linked_service_name
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+    """
+
+    linked_service_name = StringValue()
+
+    def __init__(self):
+        super().__init__()
+        self.linked_service_name = f'mlw{self.data_product_name}{self.data_product_version}'
+
+    def __eq__(self, other_azureml) -> bool:
+        same_type = isinstance(other_azureml, AzureMachineLearningWorkspace)
+        same_name = self.linked_service_name == other_azureml.linked_service_name
+        return same_type and same_name
+
+    def __str__(self) -> str:
+        return f'Azure Machine Learning linked service {self.linked_service_name}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+
+class Kusto(Notebook):
+    """
+    Kusto
+    Subclass of Notebook
+
+    Attributes:
+        linked_service_name
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+    """
+
+    linked_service_name = StringValue()
+
+    def __init__(self):
+        super().__init__()
+        self.linked_service_name = f'dec{self.data_product_name}{self.data_product_version}'
+
+    def __eq__(self, other_kusto) -> bool:
+        same_type = isinstance(other_kusto, Kusto)
+        same_name = self.linked_service_name == other_kusto.linked_service_name
+        return same_type and same_name
+
+    def __str__(self) -> str:
+        return f'Azure Data Explorer (Kusto) linked service {self.linked_service_name}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+
+class SynStorageAccount(Notebook):
+    """
+    SynStorageAccount
+    Subclass of Notebook
+
+    Attributes:
+        linked_service_name
+    
+    Methods:
+        __init__
+        __eq__
+        __str__
+        __repr__
+    """
+
+    linked_service_name = StringValue()
+
+    def __init__(self):
+        super().__init__()
+        self.linked_service_name = f'dlssyn{self.data_product_name}{self.data_product_version}'
+
+    def __eq__(self, other_syn_storage) -> bool:
+        same_type = isinstance(other_syn_storage, SynStorageAccount)
+        same_name = self.linked_service_name == other_syn_storage.linked_service_name
+        return same_type and same_name
+
+    def __str__(self) -> str:
+        return f'Synapse default ADLSGen2 linked service {self.linked_service_name}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
