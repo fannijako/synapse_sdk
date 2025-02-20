@@ -1258,6 +1258,7 @@ class KeyVault(Notebook):
     def __init__(self):
         super().__init__()
         self.linked_service_name = f'kv{self.data_product_name}{self.data_product_version}'
+        self.key_vault_name = f'kv-{self.data_product_name}-{self.environment}-{self.data_product_version}' # pylint: disable=line-too-long
 
     def __eq__(self, other_keyvault) -> bool:
         same_type = isinstance(other_keyvault, KeyVault)
@@ -1271,7 +1272,9 @@ class KeyVault(Notebook):
         return f"{type(self).__name__}()"
 
     def get_secret(self, secret_name: str) -> str:
-        raise NotImplementedError
+        return mssparkutils.credentials.getSecret(self.key_vault_name, # type: ignore
+                                                  secret_name,
+                                                  self.linked_service_name)
 
 
 class AsqlDatabase(Notebook):
