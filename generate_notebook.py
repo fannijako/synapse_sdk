@@ -52,7 +52,7 @@ def split_magic_commands(code: list) -> list:
     current_block = []
 
     for item in code:
-        if item == '%run /generic_utils':
+        if item in ['%run generic_utils', '%run test_helper']:
             if current_block:
                 splitted_code.append(current_block)
                 current_block = []
