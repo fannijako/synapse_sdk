@@ -9,8 +9,11 @@ dataproduct = DataProduct()
 def get_key(key: str):
     return dataproduct.curated_tables.get(key).get('url')
 
-assert get_key('test_delta_listing_curated') == test_curated_location, "Test delta not found"
-assert get_key('test_delta_listing_trusted') == test_trusted_location, "Test delta not found"
+url = dataproduct.curated_tables.get('test_delta_listing_curated').get('url')
+assert url == test_curated_location, "Test delta not found"
+
+url = dataproduct.trusted_tables.get('test_delta_listing_trusted').get('url')
+assert url == test_trusted_location, "Test delta not found"
 
 assert 'test_delta_listing_curated' in dataproduct, "Contains not defined properly"
 assert 'test_delta_listing_trusted' in dataproduct, "Contains not defined properly"
