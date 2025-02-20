@@ -6,9 +6,6 @@ test_curated_location, test_trusted_location = create_test_delta(Notebook())
 
 dataproduct = DataProduct()
 
-def get_key(key: str):
-    return dataproduct.curated_tables.get(key).get('url')
-
 url = dataproduct.curated_tables.get('test_delta_listing_curated').get('url')
 assert url == test_curated_location, "Test delta not found"
 
