@@ -1117,17 +1117,17 @@ class LHTSparkDataFrame(DataPlaceholder):
             raise ValueError("The provided column name already exists in the DataFrame.")
 
         # Add the current timestamp column in UTC
-        self.dataframe = self.dataframe.withColumn(timestamp_column_name, F.current_timestamp())
+        self._dataframe = self.dataframe.withColumn(timestamp_column_name, F.current_timestamp())
 
         # If a timezone is provided, convert the timestamp to the given timezone
         if timezone:
-            self.dataframe = self.dataframe.withColumn(
+            self._dataframe = self.dataframe.withColumn(
                 timestamp_column_name,
                 F.from_utc_timestamp(F.col(timestamp_column_name), timezone)
             )
 
         # Apply the specified timestamp format
-        self.dataframe = self.dataframe.withColumn(
+        self._dataframe = self.dataframe.withColumn(
             timestamp_column_name,
             F.date_format(F.col(timestamp_column_name), timestamp_format)
         )
@@ -1156,7 +1156,8 @@ class LHTSparkDataFrame(DataPlaceholder):
             raise ValueError("The provided column name already exists in the DataFrame.")
 
         concatenated_cols = F.concat(*[self.dataframe[col] for col in self.dataframe.columns])
-        self.dataframe = self.dataframe.withColumn(f"{prefix}_hash", F.sha2(concatenated_cols, 256))
+        self._dataframe = (self.dataframe
+                               .withColumn(f"{prefix}_hash", F.sha2(concatenated_cols, 256)))
 
     def rename_columns_w_pattern(self, pattern_to_replace: str, replace_to: str = "") -> None:
         """
@@ -1169,7 +1170,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         for colname in self.dataframe.columns:
             new_name = colname.replace(pattern_to_replace, replace_to)
-            self.dataframe = self.dataframe.withColumnRenamed(colname,new_name )
+            self._dataframe = self.dataframe.withColumnRenamed(colname,new_name )
 
     def rename_columns_w_mapping(self, column_names: dict) -> None:
         """
@@ -1184,7 +1185,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         """
 
         for column_old_name, column_new_name in column_names.items():
-            self.dataframe = self.dataframe.withColumnRenamed(column_old_name, column_new_name)
+            self._dataframe = self.dataframe.withColumnRenamed(column_old_name, column_new_name)
 
     def cast_data_columns(self, column_types: dict) -> None:
         """
@@ -1199,7 +1200,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         """
 
         for name, column_type in column_types.items():
-            self.dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
+            self._dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
 
     def history(self, limit: int = 10):
         return self.delta_table.history(limit)
