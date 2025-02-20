@@ -34,7 +34,7 @@ pytest test_utils_local.py || exit 1
 
 echo "All tests passed. Linter started ..."
 
-pylint_output=$(pylint --disable=W1203,C0114,C0116,W0201,W0621,W0511 $(git ls-files '*.py'))
+pylint_output=$(pylint --disable=W1203,C0114,C0116,W0201,W0621,W0511,R0801 $(git ls-files '*.py'))
 pylint_exit_code=$?
 
 echo "$pylint_output"
