@@ -925,7 +925,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         self._delta_table = Table(name = self.name, load_type = self.load_type, layer = self.layer)
         self.load_type = self._delta_table.load_type
-        self.latest_version = self.get_version()
+        self.latest_version = self.get_latest_version()
 
         self._dataframe, self.version, self.timestamp = self.load_dataframe()
 
@@ -1024,7 +1024,7 @@ class LHTSparkDataFrame(DataPlaceholder):
                     .select(F.min('version'))
                     .collect()[0][0])
 
-    def get_version(self) -> int:
+    def get_latest_version(self) -> int:
         return int(self._delta_table.history(1).select('version').collect()[0][0])
 
     def is_changed_since_last_version(self, columns_to_ignore: list = None) -> bool:
@@ -1036,7 +1036,7 @@ class LHTSparkDataFrame(DataPlaceholder):
         if len(not_existing_columns) != 0:
             raise ValueError(f'{", ".join(not_existing_columns)} are not present in the dataframe')
 
-        version_minus_one = self.dataframe - 1
+        version_minus_one = self - 1
 
         current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct().count()
         new_version_count_distinct = (version_minus_one.dataframe.drop(*columns_to_ignore)
@@ -1188,8 +1188,15 @@ class LHTSparkDataFrame(DataPlaceholder):
             self.dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
 
     @staticmethod
-    def construct_merge_condition(primary_keys: list) -> str:
-        return " AND ".join([f"src.{pk.strip()} <=> dst.{pk.strip()}" for pk in primary_keys])
+    def construct_merge_condition(primary_keys: list,
+                                  source: str = 'src',
+                                  sink: str = 'dst',
+                                  are_nulls_matched: bool = True) -> str:
+
+        sign = '<=>' if are_nulls_matched else '=='
+        return " AND ".join([f"{source}.{pk.strip()} {sign} {sink}.{pk.strip()}"
+                             for pk
+                             in primary_keys])
 
     def write_to_excel(self, target_path: str) -> None:
         """
