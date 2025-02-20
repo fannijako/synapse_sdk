@@ -1170,7 +1170,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         for colname in self.dataframe.columns:
             new_name = colname.replace(pattern_to_replace, replace_to)
-            self._dataframe = self.dataframe.withColumnRenamed(colname,new_name )
+            self._dataframe = self.dataframe.withColumnRenamed(colname, new_name)
 
     def rename_columns_w_mapping(self, column_names: dict) -> None:
         """
@@ -1224,6 +1224,7 @@ class LHTSparkDataFrame(DataPlaceholder):
             target_path (str): abfss:// path to write the result to
         """
 
+        spark.conf.set('spark.executorEnv.PYARROW_IGNORE_TIMEZONE', '1') # type: ignore # pylint: disable=undefined-variable
         temp_path = f"/tmp/{target_path.split('/')[-1]}"
 
         self.dataframe.pandas_api().to_excel(temp_path, index=False, engine='openpyxl')
