@@ -31,8 +31,14 @@ def read_py_file(py_file_name: str = "generic_utils.py"):
         for line in py_file:
             is_from_generic = line.startswith('from generic_utils import ')
             is_generic = line.startswith('import generic_utils')
+
+            is_from_test_helper = line.startswith('from test_helper import ')
+            is_test_helper = line.startswith('import test_helper')
+
             if is_from_generic or is_generic:
-                code.append('%run /generic_utils')
+                code.append('%run generic_utils')
+            elif is_from_test_helper or is_test_helper:
+                code.append('%run test_helper')
             elif line.startswith('import mssparkutils'):
                 pass
             else:
