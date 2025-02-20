@@ -1,5 +1,7 @@
 # pylint: disable=too-many-lines
 # TODO: move the classes to files
+# TODO: cleanup docstring structure and length
+# TODO: update class doscstrings
 
 import json
 
@@ -1275,6 +1277,12 @@ class KeyVault(Notebook):
         return mssparkutils.credentials.getSecret(self.key_vault_name, # type: ignore
                                                   secret_name,
                                                   self.linked_service_name)
+
+    def put_secret(self, secret_name: str, secret_value: str) -> None:
+        mssparkutils.credentials.putSecret(self.key_vault_name, # type: ignore
+                                           secret_name,
+                                           secret_value,
+                                           self.linked_service_name)
 
 
 class AsqlDatabase(Notebook):
