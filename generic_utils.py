@@ -1188,22 +1188,8 @@ class LHTSparkDataFrame(DataPlaceholder):
             self.dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
 
     @staticmethod
-    def construct_merge_condition(pk: str, separator: str=',') -> str:
-        """
-        Constructs the merge condition from the given primary keys.
-
-        Args:
-            pk (str): The primary keys separated 
-            separator (str, optional): The separator between the primary keys.
-            The default value is ','.
-        
-        Returns:
-            str: The merge condition.
-        """
-        pk_array = pk.split(separator)
-        condition = " AND ".join([f"src.{pk.strip()} <=> dst.{pk.strip()}" for pk in pk_array])
-
-        return condition
+    def construct_merge_condition(primary_keys: list) -> str:
+        return " AND ".join([f"src.{pk.strip()} <=> dst.{pk.strip()}" for pk in primary_keys])
 
     def write_to_excel(self, target_path: str) -> None:
         """
