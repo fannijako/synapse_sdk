@@ -1036,7 +1036,7 @@ class LHTSparkDataFrame(DataPlaceholder):
 
         metadata = self.history(1).select('operation', 'operationMetrics').collect()[0]
         if metadata.operation == 'MERGE':
-            return (metadata.operationMetrics.get('numOutputRows') == '0'
+            return not (metadata.operationMetrics.get('numOutputRows') == '0'
                     and metadata.operationMetrics.get('numTargetRowsInserted') == '0'
                     and metadata.operationMetrics.get('numTargetFilesAdded') == '0'
                     and metadata.operationMetrics.get('numTargetFilesRemoved') == '0'
