@@ -57,4 +57,5 @@ DAG = { "activities": [{"name": "utils",
 
 mssparkutils.notebook.runMultiple(DAG) # type: ignore
 
-mssparkutils.fs.rm('abfss://curated@dlstiscd001.dfs.core.windows.net/generic_utils/', True) # type: ignore
+TEST_FOLDER = 'abfss://curated@dlstiscd001.dfs.core.windows.net/generic_utils/'
+mssparkutils.fs.rm(TEST_FOLDER, True) # type: ignore
