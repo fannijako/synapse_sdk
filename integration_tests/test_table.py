@@ -1,4 +1,4 @@
-from generic_utils import * # pylint: disable=wrong-import-order,unused-wildcard-import,wildcard-import
+from ..synapse_notebooks.generic_utils import * # pylint: disable=wrong-import-order,unused-wildcard-import,wildcard-import
 from test_helper import create_test_delta # pylint: disable=wrong-import-order,unused-wildcard-import
 
 from pyspark.sql.types import * # type: ignore # pylint: disable=wrong-import-order,unused-wildcard-import,wildcard-import

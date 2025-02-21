@@ -6,7 +6,7 @@ import pytest # type: ignore
 
 sys.modules["mssparkutils"] = MagicMock()
 
-from  generic_utils import PositiveNumber, StringValue, StringOrNoneValue # pylint: disable=wrong-import-position
+from  ..synapse_notebooks.generic_utils import PositiveNumber, StringValue, StringOrNoneValue # pylint: disable=wrong-import-position
 
 class TestClass: # pylint: disable=too-few-public-methods,missing-class-docstring
     number = PositiveNumber()

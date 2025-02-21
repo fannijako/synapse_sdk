@@ -1,4 +1,4 @@
-from generic_utils import KeyVault
+from ..synapse_notebooks.generic_utils import KeyVault
 
 
 keyvault = KeyVault()

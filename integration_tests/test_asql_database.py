@@ -1,4 +1,4 @@
-from generic_utils import AsqlDatabase
+from ..synapse_notebooks.generic_utils import AsqlDatabase
 
 
 asql = AsqlDatabase(database_name = 'test_database_name', database_schema = 'test_database_schema')

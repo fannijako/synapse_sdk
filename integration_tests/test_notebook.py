@@ -1,4 +1,4 @@
-from generic_utils import Notebook # pylint: disable=wrong-import-order
+from ..synapse_notebooks.generic_utils import Notebook # pylint: disable=wrong-import-order
 
 from datetime import datetime, timedelta
 
