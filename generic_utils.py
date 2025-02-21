@@ -1,15 +1,12 @@
 # pylint: disable=too-many-lines
-# TODO: move the classes to files
-# TODO: cleanup docstring structure and length
-# TODO: update class doscstrings
 
 # TODO: generate the testing pipeline with py files
 # TODO: generate the alerting pipeline with py files
-
 # TODO: update readme
 
 
 import json
+import warnings
 
 from datetime import datetime, timedelta
 from functools import cached_property
@@ -237,19 +234,19 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
             raise TypeError("Data_product_name attribute must be a string.")
 
         if value != self._data_product_name:
-            print(f"""Data product name is by default extracted from the
-                  workspace name ({self.workspace_name}). Current value is
-                  {self._data_product_name}, which you'll overwrite.
-                  The path properties will be recalculated by this operation as well.
-                  New values will be:
-                    data_product_name: {value}
-                    environment: {self._environment}
-                    data_product_version: {self._data_product_version}
-                   """)
+            warnings.warn(f"""Data product name is by default extracted from the
+                          workspace name ({self.workspace_name}). Current value is
+                          {self._data_product_name}, which you'll overwrite.
+                          The path properties will be recalculated by this operation as well.
+                          New values will be:
+                            data_product_name: {value}
+                            environment: {self._environment}
+                            data_product_version: {self._data_product_version}
+                            """)
             self._data_product_name = value
             self._construct_paths()
         else:
-            print("Data_product_name attribute is already set to the same value.")
+            warnings.warn("Data_product_name attribute is already set to the same value.")
 
     @property
     def environment(self):
@@ -261,13 +258,13 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
             raise ValueError("Environment attribute must be either p or d.")
 
         if value == self._environment:
-            print("Environment attribute is already set to the same value.")
+            warnings.warn("Environment attribute is already set to the same value.")
 
         if value == 'd':
-            print("You can't work with dev data in the prod workspace.")
+            warnings.warn("You can't work with dev data in the prod workspace.")
             return
 
-        print(f"""Environment is by default extracted from the
+        warnings.warn(f"""Environment is by default extracted from the
               workspace name ({self.workspace_name}). Current value is d,
               which you'll overwrite to p for prod.
                   You'll be working with prod data in the dev workspace.
@@ -291,10 +288,10 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
             raise TypeError("data_product_version attribute needs to be a 3 character long string.")
 
         if value == self._data_product_version:
-            print("Data_product_version attribute is already set to the same value.")
+            warnings.warn("Data_product_version attribute is already set to the same value.")
             return
 
-        print(f"""Data_product_version is by default extracted from the
+        warnings.warn(f"""Data_product_version is by default extracted from the
               workspace name ({self.workspace_name}). Current value is
               {self._data_product_version}, which you'll overwrite.
                   The path properties will be recalculated by this operation as well.
@@ -530,7 +527,6 @@ class DataProduct(Notebook):
 
         def execute_layer(table_names: list, layer: str):
             for table_name in table_names:
-                print(table_name)
                 table = Table(table_name, layer = layer)
                 table.optimize(partition_filter = partition_filter)
 
@@ -553,7 +549,6 @@ class DataProduct(Notebook):
         spark.conf.set("spark.databricks.delta.vacuum.parallelDelete.enabled", "true") # type: ignore # pylint: disable=undefined-variable
         def execute_layer(table_names: list, layer: str):
             for table_name in table_names:
-                print(table_name)
                 table = Table(table_name, layer = layer)
                 table.vacuum(hours = hours, force = force)
 
@@ -878,7 +873,7 @@ class Table(DataPlaceholder): # pylint: disable=too-many-instance-attributes
         """
         E.g. run an optimize, run a vacuum or use the following spark configs while reading
         """
-        print("Run set_table_properties to set the delta table properties.")
+        return "Run set_table_properties to set the delta table properties."
 
 
 class LHTSparkDataFrame(DataPlaceholder):
@@ -1065,7 +1060,9 @@ class LHTSparkDataFrame(DataPlaceholder):
         current_version_count = self.dataframe.count()
         current_version_count_distinct = self.dataframe.drop(*columns_to_ignore).distinct().count()
         if current_version_count_distinct != current_version_count:
-            return True # TODO: raise warning that this might be false
+            warnings.warn("Content can be unchanged, but can't check due to duplicates in data.",
+                          UserWarning)
+            return True
 
         version_minus_one = self - 1
         new_version_count_distinct = (version_minus_one.dataframe.drop(*columns_to_ignore)
