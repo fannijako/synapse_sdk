@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines
 
-# TODO: generate the testing pipeline with py files
 # TODO: generate the alerting pipeline with py files
 # TODO: update readme
 
