@@ -1,4 +1,4 @@
-from ..synapse_notebooks.generic_utils import DataProduct
+from generic_utils import DataProduct
 
 DataProduct().optimize_all()
 DataProduct().vacuum_all()

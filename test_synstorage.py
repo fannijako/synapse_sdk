@@ -1,4 +1,4 @@
-from ..synapse_notebooks.generic_utils import SynStorageAccount
+from generic_utils import SynStorageAccount
 
 
 synstorage = SynStorageAccount()

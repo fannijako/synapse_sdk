@@ -1,4 +1,4 @@
-from ..synapse_notebooks.generic_utils import Kusto
+from generic_utils import Kusto
 
 
 kusto = Kusto()

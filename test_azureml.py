@@ -1,4 +1,4 @@
-from ..synapse_notebooks.generic_utils import AzureMachineLearningWorkspace
+from generic_utils import AzureMachineLearningWorkspace
 
 
 azureml = AzureMachineLearningWorkspace()
