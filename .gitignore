@@ -1,5 +1,6 @@
 /notebook
 /myenv
+/lht*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

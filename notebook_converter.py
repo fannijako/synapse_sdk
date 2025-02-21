@@ -8,7 +8,9 @@ def generate_paths():
     notebooks_path = os.path.join(current_working_directory, 'notebook')
     notebook_py_path = os.path.join(current_working_directory, 'notebook_py')
 
-    full_notebooks_paths = [os.path.join(notebooks_path, notebook) for notebook in os.listdir(notebooks_path)]
+    full_notebooks_paths = [os.path.join(notebooks_path, notebook)
+                            for notebook
+                            in os.listdir(notebooks_path)]
 
     if not os.path.exists(notebook_py_path):
         os.mkdir(notebook_py_path)
@@ -18,7 +20,7 @@ def generate_paths():
 
 def read_json_file(notebook_path: str) -> dict:
 
-    with open(notebook_path) as notebook_file:
+    with open(notebook_path, encoding='utf-8') as notebook_file:
         json_file_content = json.loads(notebook_file.read())
 
     return json_file_content
@@ -26,7 +28,7 @@ def read_json_file(notebook_path: str) -> dict:
 
 def write_py_file(value: list, py_path: str) -> None:
 
-    with open(py_path, 'w') as py_file:
+    with open(py_path, 'w', encoding='utf-8') as py_file:
         for line in value:
             py_file.write(line)
             py_file.write(os.linesep)
@@ -35,13 +37,18 @@ def write_py_file(value: list, py_path: str) -> None:
 def process_json_content(json_file_content: dict) -> list:
 
     code = json_file_content.get('properties').get('cells')
-    value = '\n'.join(['\n'.join(code_cell.get('source')) for code_cell in code if code_cell.get('cell_type') == 'code']).split('\n')
+    code_cells = ['\n'.join(code_cell.get('source'))
+                  for code_cell
+                  in code
+                  if code_cell.get('cell_type') == 'code']
+
+    value = '\n'.join(code_cells).split('\n')
 
     return value
 
 
 def create_py_file(notebook_path: str, notebook_py_path: str) -> None:
-    
+
     json_file_content = read_json_file(notebook_path)
 
     value = process_json_content(json_file_content)

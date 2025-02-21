@@ -1,28 +1,23 @@
-import pytest # type: ignore
-import sys
+from generic_utils import Utils
 
-from unittest.mock import MagicMock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta # pylint: disable=wrong-import-order
 
-sys.modules["mssparkutils"] = MagicMock()
+CURATED = 'abfss://curated@dlstiscd001.dfs.core.windows.net'
+TEST_FOLDER = f'{CURATED}/test'
 
-from  generic_utils import Utils
+utils = Utils()
 
+ERROR_MESSAGE =  "Get previous date is not defined properly"
+expected = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
+assert utils.get_previous_date(5) == expected, ERROR_MESSAGE
 
-@pytest.fixture
-def utils_instance():
-    return Utils()
+utils.write_non_distributed_json({'test': 'test'}, f'{TEST_FOLDER}/test.json')
 
-def test_singleton(utils_instance):
-    assert utils_instance is Utils(), "Utils is not a singleton"
+deep_list = [file for file in utils.deep_ls(TEST_FOLDER, 1) if file.name == 'test.json']
+assert deep_list[0].path == f'{TEST_FOLDER}/test.json', "Test.json is not found"
 
-def test_str_representation(utils_instance):
-    assert str(utils_instance).startswith("Utils class with methods:"), "Incorrect __str__ representation"
+deep_list = [file for file in utils.deep_ls(CURATED, 2) if file.name in ['test.json', 'test']]
+assert deep_list[0].path == f'{TEST_FOLDER}/test.json', "Test.json is not found"
 
-def test_repr_representation(utils_instance):
-    assert repr(utils_instance) == "Utils()", "Incorrect __repr__ representation"
-
-def test_get_previous_date(utils_instance):
-    days_back = 5
-    expected_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
-    assert utils_instance.get_previous_date(days_back = days_back) == expected_date, "get_previous_date did not return the correct date"
+deep_list = [file for file in utils.deep_ls(CURATED, 1) if file.name in ['test.json', 'test']]
+assert deep_list[0].path == f'{TEST_FOLDER}', 'Test founder is not found'

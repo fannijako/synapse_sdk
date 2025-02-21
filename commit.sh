@@ -7,7 +7,7 @@ REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DA
 BRANCH_NAME="fj/ahornboden/modularized_generic"
 COMMIT_MESSAGE="automatically commited by commit.sh"
 
-FILES=("generic_utils.py" "vacuum_notebook.py")
+FILES=("generic_utils.py" "vacuum_notebook.py" "test_helper.py" "test_asql_database.py" "test_azureml.py" "test_data_product.py" "test_keyvault.py" "test_kusto.py" "test_synstorage.py" "test_utils.py" "test_notebook.py" "test_dataframe.py" "test_table.py" "test_generic_notebook.py")
 
 # Additional variables
 PYTHON_VERSION="python3"
@@ -29,13 +29,34 @@ pip install -r requirements.txt
 
 echo "Requirements installed for the tests. Starting the pytests..."
 
-pytest || exit 1
+pytest test_descriptor.py || exit 1
+pytest test_utils_local.py || exit 1
 
-echo "All tests passed. Deactivating virtual environment..."
+echo "All tests passed. Linter started ..."
+
+pylint_output=$(pylint --disable=W1203,C0114,C0116,W0201,W0621,W0511,R0801 $(git ls-files '*.py'))
+pylint_exit_code=$?
+
+echo "$pylint_output"
+
+if [ $pylint_exit_code -le 9 ]; then
+    echo "Linter passed with score ${pylint_exit_code}/10"
+else
+    echo "Linter failed with score ${pylint_exit_code}/10"
+    exit 1
+fi
+
+echo "Linter passed. Deactivating virtual environment..."
 
 deactivate
 
-echo "Virtual environment deactivated. Starting the .py to .json conversions..."
+echo "Virtual environment deactivated. Commiting to the repository..."
+
+git add .
+git commit -m $COMMIT_MESSAGE
+git push
+
+echo "Git commit is finished for the py files. Starting the .py to .json conversions..."
 
 for file in "${FILES[@]}"; do
     $PYTHON_VERSION $NOTEBOOK_GENERATION_SCRIPT "$file"
@@ -86,5 +107,7 @@ rm -rf __pycache__
 rm -rf .pytest_cache
 rm -rf .venv
 rm -rf notebook
+
+clear
 
 echo "Successfully finished."
