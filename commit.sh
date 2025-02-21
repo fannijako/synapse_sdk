@@ -29,8 +29,7 @@ pip install -r requirements.txt
 
 echo "Requirements installed for the tests. Starting the pytests..."
 
-pytest test_descriptor.py || exit 1
-pytest test_utils_local.py || exit 1
+pytest local_tests || exit 1
 
 echo "All tests passed. Linter started ..."
 
