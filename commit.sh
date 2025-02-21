@@ -94,8 +94,6 @@ done
 
 echo "Generated notebook files have been added to the repository. Starting the commit..."
 
-# TODO: commit to TISC and run integration tests
-
 cd $REPOSITORY_NAME
 git add .
 git commit -m $COMMIT_MESSAGE
