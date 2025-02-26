@@ -1210,8 +1210,9 @@ class LHTSparkDataFrame(DataPlaceholder):
                 }
         """
 
-        for name, column_type in column_types.items():
-            self._dataframe = self.dataframe.withColumn(name, F.col(name).cast(column_type))
+        self._dataframe = (self.dataframe.withColumns({name: F.col(name).cast(column_type)
+                                                       for name, column_type
+                                                       in column_types.items()}))
 
     def history(self, limit: int = 10):
         return self.delta_table.history(limit)
