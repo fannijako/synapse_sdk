@@ -217,6 +217,10 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
         self._pool = mssparkutils.env.getPoolName() # type: ignore
         self._cluster = mssparkutils.env.getClusterId() # type: ignore
 
+        self._resource_group = f'rg-ds-{self._data_product_name}-{self._environment}-{self._data_product_version}'
+        self._session_notebook_name = spark.conf.get("spark.synapse.context.notebookname") # type: ignore # pylint: disable=undefined-variable
+        self._session_run_id = self._session_notebook_name.split("_")[-1]
+
         self.set_spark_datetime_settings()
 
     @property
@@ -387,6 +391,18 @@ class Notebook(Utils): # pylint: disable=too-many-instance-attributes
     @property
     def cluster(self):
         return self._cluster
+
+    @property
+    def resource_group(self):
+        return self._resource_group
+
+    @property
+    def session_notebook_name(self):
+        return self._session_notebook_name
+
+    @property
+    def session_run_id(self):
+        return self._session_run_id
 
     def set_spark_datetime_settings(self) -> None:
         spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead" , "CORRECTED") # type: ignore # pylint: disable=undefined-variable
