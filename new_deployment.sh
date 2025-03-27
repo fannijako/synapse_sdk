@@ -2,7 +2,6 @@
 
 # Customizable variables
 TARGET_DATA_PRODUCT_NAME="CTT"
-TISC_BRANCH="fj/ahornboden/modularized_generic"
 
 # Additional variables
 PYTHON_VERSION="python3"
@@ -25,12 +24,12 @@ echo "Cloning tisc's repository..."
 if [ ! -d "$TISC_REPOSITORY_NAME" ]; then
     git clone $TISC_REPOSITORY_URL
     echo "Tisc's repository cloned."
-    git checkout $TISC_BRANCH
+    git checkout main
 fi
     echo "Tisc's repository has already been cloned. Pulling latest version."
 
     cd $TISC_REPOSITORY_NAME
-    git checkout $TISC_BRANCH
+    git checkout main
     git pull
     cd ..
 
