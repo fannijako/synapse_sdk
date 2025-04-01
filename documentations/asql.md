@@ -66,12 +66,9 @@ connection_properties = {
 ### Example Usage
 
 ```python
-# Create an instance of AsqlDatabase
 database = AsqlDatabase("my_database", "my_schema")
+connection_properties, url, dbtable = database.build_connection_properties("my_table")
 
 # Get the connection token
 token = database.get_token()
-
-# Build connection properties for a table
-connection_properties, url, dbtable = database.build_connection_properties("my_table")
 ```

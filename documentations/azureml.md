@@ -1,16 +1,34 @@
 ## AzureMachineLearningWorkspace Class Documentation
 ### Overview
 
-The `AzureMachineLearningWorkspace` class is a subclass of `Notebook`, designed to manage Azure Machine Learning workspaces. It provides attributes and methods to handle linked services within these workspaces.
+The `AzureMachineLearningWorkspace` class represents an Azure Machine Learning Workspace.
+
+The `AzureMachineLearningWorkspace` class is a subclass of `Notebook`.
 
 ### Attributes
 
-- **`linked_service_name`**: A string attribute representing the name of the linked service. It is automatically generated based on the `data_product_name` and `data_product_version`.
+#### Required parameters
+
+--
+
+#### Optional parameters
+
+--
+
+#### Inherited attributes
+- All attributes of a Notebook class, see in `notebook.md`.
+
+#### Additional attributes
+- **`linked_service_name`**: the name of the linked service for the Azure ML Workspace.
+    - constructed based on the data product name and version
+    - e.g. mlwtisc002
 
 ### Methods
 
 #### `__init__`
-Initializes an instance of `AzureMachineLearningWorkspace`. It calls the parent class's constructor and sets the `linked_service_name` attribute.
+Initializes an instance of `AzureMachineLearningWorkspace`.
+
+It sets the `linked_service_name` attribute based on the data product name and version.
 
 #### `__eq__`
 Checks if two instances of `AzureMachineLearningWorkspace` are equal. Equality is determined by both instances being of the same type and having the same `linked_service_name`.
@@ -19,18 +37,13 @@ Checks if two instances of `AzureMachineLearningWorkspace` are equal. Equality i
 Returns a string representation of the `AzureMachineLearningWorkspace` instance, including the linked service name.
 
 #### `__repr__`
-Returns a string that represents the type of the instance, which can be used for debugging purposes.
+Returns a string that represents the type of the instance.
 
 ### Example Usage
 
 ```python
-# Create an instance of AzureMachineLearningWorkspace
 workspace = AzureMachineLearningWorkspace()
 
-# Print the string representation of the workspace
-print(workspace)
-
-# Compare two workspaces for equality
-workspace2 = AzureMachineLearningWorkspace()
-print(workspace == workspace2)
+# Get the linked service's name
+print(workspace.linked_service_name)
 ```
