@@ -1,3 +1,55 @@
+## DataPlaceholder and LHTSparkDataFrame Classes Documentation
+### Overview
+
+The `DataPlaceholder` class serves as a base class for managing data structures like tables and data frames.
+
+It is subclassed by the `LHTSparkDataFrame` class, as well as the `Table` class, which provides additional functionality specific to table and dataframe operations.
+
+### DataPlaceholder Class
+
+#### Description
+
+The `DataPlaceholder` class is designed to handle basic data placeholder operations. It includes attributes for `name`, `load_type`, and `layer`.
+
+#### Attributes
+#### Required parameters
+- **name**: The name of the table
+    - read only after initialization
+    - e.g. zkpa_kalk_stat for the zkpa_kalk_stat.delta delta lake
+
+#### Optional parameters
+- **load_type**: The type of data loading
+    - can be specified or determined automatically
+    - either full or scd1
+    - calculated based on the most common write operation type (MERGE or OWERWRITE) within the table history if set automatically
+
+- **layer**: The layer in which the data is stored
+    - read only after initialization
+    - either 'curated' or 'trusted'
+    - defaults to curated
+
+#### Inherited attributes
+- All attributes of a DataProduct class, see in `dataproduct.md`.
+
+#### Additional attributes
+- **path**: abfss path to the delta lake
+    - set by the _find_path() method within the initialization
+    - read only attribute
+
+#### Methods
+
+#### `__init__(name: str, load_type: str = None, layer: str = 'curated') -> DataPlaceholder`:
+Initializes a `DataPlaceholder` instance.
+
+It sets all attributes and searches the path with the `_find_path()` method to the specific delta lake.
+
+#### `_find_path() -> str`:
+Finds the path to the data based on its name and layer.
+
+#### `__eq__(other_table: DataPlaceholder) -> bool`:
+Checks if two `DataPlaceholder` instances are equal based on their type, name, and layer. Evaluates to True on a Table and an LHTSparkDataFrame over the same Delta Lake.
+
+
 ## LHTSparkDataFrame Documentation
 ### Overview
 
