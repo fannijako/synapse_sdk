@@ -72,3 +72,6 @@ connection_properties, url, dbtable = database.build_connection_properties("my_t
 # Get the connection token
 token = database.get_token()
 ```
+
+### Notes
+- The `TokenLibrary` module is used for interacting with the database, which is specific to Azure Synapse Analytics environments.

@@ -25,18 +25,18 @@ The `AzureMachineLearningWorkspace` class is a subclass of `Notebook`.
 
 ### Methods
 
-#### `__init__`
+#### `__init__() -> AzureMachineLearningWorkspace`
 Initializes an instance of `AzureMachineLearningWorkspace`.
 
 It sets the `linked_service_name` attribute based on the data product name and version.
 
-#### `__eq__`
+#### `__eq__(other_azureml: AzureMachineLearningWorkspace) -> bool`
 Checks if two instances of `AzureMachineLearningWorkspace` are equal. Equality is determined by both instances being of the same type and having the same `linked_service_name`.
 
-#### `__str__`
+#### `__str__(): -> str`
 Returns a string representation of the `AzureMachineLearningWorkspace` instance, including the linked service name.
 
-#### `__repr__`
+#### `__repr__(): -> str`
 Returns a string that represents the type of the instance.
 
 ### Example Usage
