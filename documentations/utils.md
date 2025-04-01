@@ -3,48 +3,44 @@
 
 The `Utils` class is designed to provide a set of utility methods for various operations such as listing files, handling dates, writing JSON files, and managing delta tables.
 
+The `Utils` class serves as the mother class for all other modules.
+
 ### Attributes
-- **None**: This class does not have any attributes.
+--
 
 ### Methods
+#### `__str__() -> str`
+Returns a string representation of Utils.
 
-#### 1. `__init__`
-- **Purpose**: Initializes the `Utils` class.
-- **Parameters**: None
-- **Returns**: None
+#### `__repr__() -> str`
+Returns a string representation that could be used to recreate the object.
 
-#### 2. `__str__`
-- **Purpose**: Returns a string representation of the `Utils` class.
-- **Parameters**: None
-- **Returns**: A string indicating the class name and its methods.
+#### `deep_ls(path: str, max_depth: int = 1) -> Iterator[str]:`
+Lists all files and folders in a specified path and its subfolders up to a maximum recursion depth.
 
-#### 3. `__repr__`
-- **Purpose**: Returns a formal string representation of the `Utils` class.
-- **Parameters**: None
-- **Returns**: A string in the format `Utils()`.
-
-#### 4. `deep_ls`
-- **Purpose**: Lists all files and folders in a specified path and its subfolders up to a maximum recursion depth.
 - **Parameters**:
-  - `path` (str): The path to list.
+  - `path` (str): The abfss path to list.
   - `max_depth` (int, optional): The maximum depth of the listing. Defaults to 1.
+
 - **Returns**: An iterator yielding all files until `max_depth` has been reached.
 
-#### 5. `get_previous_date`
-- **Purpose**: Returns the date a specified number of days back from the current date.
+#### `get_previous_date(days_back: int) -> str:`
+Returns the date a specified number of days back from the current date.
+
 - **Parameters**:
   - `days_back` (int): The number of days to go back.
 - **Returns**: A string representing the previous date in the format `YYYY-MM-DD`.
 
-#### 6. `write_non_distributed_json`
-- **Purpose**: Writes a JSON file to a specified path in ABFSS as a single file, not as a distributed object.
+#### `write_non_distributed_json(content: dict, target_path: str) -> None:`
+Writes a JSON file to a specified path in ABFSS as a single file, not as a distributed object.
+
 - **Parameters**:
   - `content` (dict): The content to be written to the JSON file.
-  - `target_path` (str): The ABFSS path where the file will be written.
-- **Returns**: None
+  - `target_path` (str): The abfss path where the file will be written.
 
-#### 7. `get_all_deltas`
-- **Purpose**: Creates a dictionary of available delta tables with their paths.
+#### `get_all_deltas(path_list: list[str], max_depth: int = 3) -> dict:`
+Creates a dictionary of available delta tables with their paths.
+
 - **Parameters**:
   - `path_list` (list[str]): A list of paths to search for delta tables.
   - `max_depth` (int, optional): The maximum depth to search. Defaults to 3.
@@ -53,33 +49,21 @@ The `Utils` class is designed to provide a set of utility methods for various op
 ### Example Usage
 
 ```python
-from datetime import datetime, timedelta
-import json
-from typing import Iterator
-
-# Initialize the Utils class
 utils = Utils()
 
-# List files and folders
 for file in utils.deep_ls("/path/to/list", max_depth=2):
     print(file)
 
-# Get previous date
 previous_date = Utils.get_previous_date(7)
 print(previous_date)
 
-# Write JSON to ABFSS
-content = {"key": "value"}
-target_path = "abfss://path/to/write.json"
-Utils.write_non_distributed_json(content, target_path)
+Utils.write_non_distributed_json({"key": "value"},  "abfss://path/to/write.json")
 
-# Get all delta tables
 path_list = ["/path/to/search/1", "/path/to/search/2"]
 delta_tables = utils.get_all_deltas(path_list)
 print(delta_tables)
 ```
 
 ### Notes
-- The `deep_ls` method uses `mssparkutils.fs.ls` which is specific to Azure Synapse Analytics environments.
-- The `write_non_distributed_json` method writes to a temporary local file before copying it to ABFSS.
-- The `get_all_deltas` method searches for `.delta` files within the specified paths and handles `Py4JJavaError` exceptions.
+- The module uses `mssparkutils.fs` which is specific to Azure Synapse Analytics environments.
+- The `write_non_distributed_json` method writes to a temporary local file before copying it to abfss.
