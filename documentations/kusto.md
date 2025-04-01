@@ -1,45 +1,47 @@
 ## Kusto Class Documentation
 ### Overview
-The `Kusto` class is a subclass of `Notebook`, designed to represent an Azure Data Explorer (Kusto) linked service. It provides attributes and methods for managing and comparing Kusto instances.
+
+The `Kusto` class represents an Azure Data Explorer (Kusto) service.
+
+The `Kusto` class is a subclass of `Notebook`.
 
 ### Attributes
-- **linked_service_name**: A string attribute that stores the name of the linked service. It is automatically generated in the `__init__` method.
+
+#### Required parameters
+--
+
+#### Optional parameters
+--
+
+#### Inherited attributes
+- All attributes of a Notebook class, see in `notebook.md`.
+
+#### Additional attributes
+- **linked_service_name**: The name of the linked service for the service.
+    - constructed based on the data product name and version
+    - e.g. dectisc002
 
 ### Methods
-#### `__init__`
-- **Purpose**: Initializes a new `Kusto` instance.
-- **Parameters**: None
-- **Description**: Calls the parent class's `__init__` method and sets the `linked_service_name` attribute based on the `data_product_name` and `data_product_version`.
+#### `__init__() -> Kusto`
 
-#### `__eq__`
-- **Purpose**: Compares two `Kusto` instances for equality.
-- **Parameters**:
-  - `other_kusto`: Another `Kusto` instance to compare with.
-- **Returns**: `True` if both instances are of the same type and have the same `linked_service_name`, otherwise `False`.
+Initializes an `Kusto` instance.
 
-#### `__str__`
-- **Purpose**: Returns a human-readable string representation of the `Kusto` instance.
-- **Parameters**: None
-- **Returns**: A string describing the Azure Data Explorer (Kusto) linked service with its name.
+It sets the `linked_service_name` based on the data product name and version.
 
-#### `__repr__`
-- **Purpose**: Returns a string that could be used to recreate the `Kusto` instance.
-- **Parameters**: None
-- **Returns**: A string indicating the type of the instance.
+#### `__eq__(other_kusto: Kusto) -> bool`
+
+Checks if two `Kusto` instances are equal based on their instance type, and `linked_service_name` attributes.
+
+#### `__str__() -> str`
+
+Returns a string representation of the Kusto linked service.
+
+#### `__repr__() -> str`
+
+Returns a string representation that could be used to recreate the object.
 
 ### Example Usage
 ```python
-# Create a new Kusto instance
 kusto_instance = Kusto()
-
-# Print the string representation
-print(kusto_instance)  # Output: Azure Data Explorer (Kusto) linked service dec[DataProductName][DataProductVersion]
-
-# Compare two instances
-another_kusto = Kusto()
-print(kusto_instance == another_kusto)  # Output depends on linked_service_name equality
+print(kusto_instance.linked_service_name)
 ```
-
-### Notes
-- The `data_product_name` and `data_product_version` are assumed to be defined elsewhere in the codebase, as they are used in generating the `linked_service_name`.
-- This class is designed to work within a specific context where `data_product_name` and `data_product_version` are available.
