@@ -1,37 +1,51 @@
 ## DataProduct Class Documentation
 ### Overview
 
-The `DataProduct` class is a subclass of `Notebook`, designed to manage data products by handling curated and trusted tables. It provides methods for optimizing and vacuuming these tables.
+The `DataProduct` class is designed to manage data products by handling curated and trusted tables. It provides methods for optimizing and vacuuming these tables.
+
+The `DataProduct` class is a subclass of `Notebook`.
 
 ### Attributes
+#### Required parameters
+--
 
-- **curated_tables**: A dictionary containing curated tables.
-- **trusted_tables**: A dictionary containing trusted tables.
+#### Optional parameters
+--
+
+#### Inherited attributes
+- All attributes of a Notebook class, see in `notebook.md`.
+
+#### Additional attributes
+- **curated_tables**:
+  - cached attribute
+  - constructed using the Util's module's get_all_deltas() method
+  - A dictionary containing curated tables.
+
+- **trusted_tables**:
+  - cached attribute
+  - constructed using the Util's module's get_all_deltas() method
+  - A dictionary containing trusted tables.
 
 ### Methods
 
-#### `__init__`
-Initializes a `DataProduct` instance by calling the parent class's constructor and referencing the `curated_tables` and `trusted_tables` attributes.
+#### `__init__() -> DataProduct`
+Initializes an `DataProduct` instance.
 
-#### `__eq__`
-Checks if two `DataProduct` instances are equal based on their type and Azure storage name.
+It sets the `curated_tables` and `trusted_tables` attributes.
 
-#### `__contains__`
+#### `__eq__(other_data_product: DataProduct) -> bool`
+Checks if two `DataProduct` instances are equal based on their type and Azure storage account name.
+
+#### `__contains__(table: str) -> bool`
 Determines if a table is present in either the curated or trusted tables.
 
-#### `__str__`
+#### `__str__() -> str`
 Returns a string representation of the data product, including its name and version.
 
-#### `__repr__`
+#### `__repr__() -> str`
 Returns a string representation of the object type.
 
-#### `curated_tables`
-A cached property that retrieves all delta tables from the curated path.
-
-#### `trusted_tables`
-A cached property that retrieves all delta tables from the trusted path.
-
-#### `optimize_all`
+#### `optimize_all(layer: str = 'curated', partition_filter: str = None) -> None`
 Optimizes delta tables in specified layers. If no layer is specified, it optimizes both curated and trusted layers.
 
 - **Parameters**:
@@ -43,7 +57,7 @@ Optimizes delta tables in specified layers. If no layer is specified, it optimiz
   DataProduct().optimize_all()
   ```
 
-#### `vacuum_all`
+#### `vacuum_all(layer: str = 'curated', hours: int = 168, force: bool = False) -> None`
 Vacuums delta tables in specified layers. If no layer is specified, it vacuums both curated and trusted layers.
 
 - **Parameters**:
@@ -72,9 +86,3 @@ data_product.optimize_all()
 # Vacuum all tables in the trusted layer with a retention period of 7 days
 data_product.vacuum_all(layer='trusted', hours=168)
 ```
-
-### Notes
-
-- The `DataProduct` class relies on the `Notebook` class and uses methods like `get_all_deltas` which are not defined in this snippet.
-- The `Table` class is used to interact with individual tables, but its definition is not provided here.
-- The `spark` object is assumed to be available for configuring Spark settings.
