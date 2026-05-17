@@ -1,39 +1,49 @@
-from generic_utils import AsqlDatabase
+import pytest  # type: ignore
+
+from src.generic_utils import AsqlDatabase
 
 
-asql = AsqlDatabase(database_name = 'test_database_name', database_schema = 'test_database_schema')
+@pytest.fixture
+def asql():
+    return AsqlDatabase(database_name='test_database_name',
+                        database_schema='test_database_schema')
 
-try:
-    asql = AsqlDatabase(database_name = None, database_schema = 'test_database_schema')
-    raise AssertionError("Error was not raised")
-except TypeError:
-    pass
-except Exception as e:
-    raise e
 
-try:
-    asql = AsqlDatabase(database_name = 'test_database_name', database_schema = None)
-    raise AssertionError("Error was not raised")
-except TypeError:
-    pass
-except Exception as e:
-    raise e
+class TestAsqlDatabase:
+    def test_missing_database_name_raises(self):
+        with pytest.raises(TypeError):
+            AsqlDatabase(database_name=None, database_schema='test_database_schema')
 
-assert asql.database_name == 'test_database_name', 'Database name is not set correctly'
-assert asql.database_schema == 'test_database_schema', 'Database schema is not set correctly'
+    def test_missing_database_schema_raises(self):
+        with pytest.raises(TypeError):
+            AsqlDatabase(database_name='test_database_name', database_schema=None)
 
-ERROR_MESSAGE = 'Database server is not set correctly'
-assert asql.database_server == 'sql-tisc-we-nonprod.database.windows.net:1433', ERROR_MESSAGE
-assert asql.linked_service_name == 'ls_asql_tisc', 'Linked service name is not set correctly'
+    def test_database_name(self, asql):
+        assert asql.database_name == 'test_database_name'
 
-assert str(asql).startswith('Azure SQL database linked service to the test_database_schema')
+    def test_database_schema(self, asql):
+        assert asql.database_schema == 'test_database_schema'
 
-ERROR_MESSAGE = "repr representation is not set correctly"
-assert repr(asql).startswith("AsqlDatabase(database_name="), ERROR_MESSAGE
+    def test_database_server(self, asql):
+        assert asql.database_server == 'sql-tisc-we-nonprod.database.windows.net:1433'
 
-assert asql == asql, 'Instance should equal itself' # pylint: disable=comparison-with-itself
+    def test_linked_service_name(self, asql):
+        assert asql.linked_service_name == 'ls_asql_tisc'
 
-asql2 = AsqlDatabase(database_name = 'test_database_name', database_schema = 'test_database_schema')
-assert asql == asql2, 'Instances should equal'
-asql3 = AsqlDatabase(database_name = 'test', database_schema = 'test')
-assert asql != asql3
+    def test_str(self, asql):
+        assert str(asql).startswith('Azure SQL database linked service to the test_database_schema')
+
+    def test_repr(self, asql):
+        assert repr(asql).startswith("AsqlDatabase(database_name=")
+
+    def test_equal_to_itself(self, asql):
+        assert asql == asql  # pylint: disable=comparison-with-itself
+
+    def test_equal_instances(self, asql):
+        asql2 = AsqlDatabase(database_name='test_database_name',
+                             database_schema='test_database_schema')
+        assert asql == asql2
+
+    def test_unequal_instances(self, asql):
+        asql3 = AsqlDatabase(database_name='test', database_schema='test')
+        assert asql != asql3

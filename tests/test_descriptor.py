@@ -2,62 +2,73 @@ import sys
 
 from unittest.mock import MagicMock
 
-import pytest # type: ignore
+import pytest  # type: ignore
 
 sys.modules["mssparkutils"] = MagicMock()
 
-from  generic_utils import PositiveNumber, StringValue, StringOrNoneValue # pylint: disable=wrong-import-position
+from src.generic_utils import (  # noqa: E402 pylint: disable=wrong-import-position
+    PositiveNumber,
+    StringOrNoneValue,
+    StringValue,
+)
 
-class TestClass: # pylint: disable=too-few-public-methods,missing-class-docstring
+
+class _Target:  # pylint: disable=too-few-public-methods
     number = PositiveNumber()
     string = StringValue()
-    stringOrNone = StringOrNoneValue()
+    string_or_none = StringOrNoneValue()
 
 
 @pytest.fixture
 def instance():
-    return TestClass()
+    return _Target()
 
-def test_positive_number_assignment_to_positive_number(instance):
-    instance.number = 10
-    assert instance.number == 10, "Positive integer can't be assigned to PositiveNumber."
 
-def test_float_assignment_to_positive_number(instance):
-    instance.number = 10.2
-    assert instance.number == 10.2, "Positive float can't be assigned to PositiveNumber."
+class TestPositiveNumber:
+    def test_positive_integer_assignment(self, instance):
+        instance.number = 10
+        assert instance.number == 10
 
-def test_negative_number_assignment_to_positive_number(instance):
-    with pytest.raises(TypeError, match="positive number expected"):
-        instance.number = -5
+    def test_positive_float_assignment(self, instance):
+        instance.number = 10.2
+        assert instance.number == 10.2
 
-def test_zero_assignment_to_positive_number(instance):
-    instance.number = 0
-    assert instance.number == 0, "0 can't be assigned to PositiveNumber."
+    def test_negative_number_raises(self, instance):
+        with pytest.raises(TypeError, match="positive number expected"):
+            instance.number = -5
 
-def test_non_numeric_assignment_to_positive_number(instance):
-    with pytest.raises(TypeError, match="positive number expected"):
-        instance.number = "string"
+    def test_zero_assignment(self, instance):
+        instance.number = 0
+        assert instance.number == 0
 
-def test_string_assignment_to_string(instance):
-    instance.string = 'string'
-    assert instance.string == 'string', "String can't be assigned to StringValue."
+    def test_non_numeric_raises(self, instance):
+        with pytest.raises(TypeError, match="positive number expected"):
+            instance.number = "string"
 
-def test_integer_assignment_to_string(instance):
-    with pytest.raises(TypeError, match="string expected"):
-        instance.string = 10
 
-def test_none_assignment_to_string(instance):
-    with pytest.raises(TypeError, match="string expected"):
-        instance.string = None
+class TestStringValue:
+    def test_string_assignment(self, instance):
+        instance.string = 'string'
+        assert instance.string == 'string'
 
-def test_string_assignment_to_string_or_none(instance):
-    instance.stringOrNone = 'string'
-    assert instance.stringOrNone == 'string', "String can't be assigned to StringValue."
+    def test_integer_raises(self, instance):
+        with pytest.raises(TypeError, match="string expected"):
+            instance.string = 10
 
-def test_integer_assignment_to_string_or_none(instance):
-    with pytest.raises(TypeError, match="string expected"):
-        instance.stringOrNone = 10
+    def test_none_raises(self, instance):
+        with pytest.raises(TypeError, match="string expected"):
+            instance.string = None
 
-def test_none_assignment_to_string_or_none(instance):
-    instance.stringOrNone = None
-    assert instance.stringOrNone is None, "None can't be assigned to StringValue."
+
+class TestStringOrNoneValue:
+    def test_string_assignment(self, instance):
+        instance.string_or_none = 'string'
+        assert instance.string_or_none == 'string'
+
+    def test_integer_raises(self, instance):
+        with pytest.raises(TypeError, match="string expected"):
+            instance.string_or_none = 10
+
+    def test_none_assignment(self, instance):
+        instance.string_or_none = None
+        assert instance.string_or_none is None

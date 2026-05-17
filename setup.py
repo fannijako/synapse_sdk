@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 BUILD = [
-    "delta-spark",
-    "pyspark",
-    "pyspark[sql]",
+    "delta-spark>=3.0.0,<4.0",
+    "pyspark>=3.5.0,<4.0",
+    "pyspark[sql]>=3.5.0,<4.0",
 ]
 
 TEST = [

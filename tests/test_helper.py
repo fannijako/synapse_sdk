@@ -1,3 +1,4 @@
+import builtins  # noqa: C0413
 import random
 
 
@@ -5,6 +6,8 @@ def create_test_delta(notebook):
     data = []
     names = ["Alice", "Bob", "Charlie", "David", "Eve"]
     departments = ["HR", "IT", "Finance", "Marketing", "Sales"]
+
+    spark = getattr(builtins, 'spark', None)  # pylint: disable=invalid-name
 
     for _ in range(1000):
         name = random.choice(names)
@@ -19,11 +22,11 @@ def create_test_delta(notebook):
     path = f'{notebook.trusted_path}/generic_utils/integration_test'
     test_trusted_location = f'{path}/test_delta_listing_trusted.delta'
 
-    (spark.createDataFrame(data, ["name", "age", "salary", "department"]) # type: ignore # pylint: disable=undefined-variable
+    (spark.createDataFrame(data, ["name", "age", "salary", "department"])  # type: ignore
           .write.format("delta")
           .mode("overwrite")
           .save(test_curated_location))
-    (spark.createDataFrame(data, ["name", "age", "salary", "department"]) # type: ignore # pylint: disable=undefined-variable
+    (spark.createDataFrame(data, ["name", "age", "salary", "department"])  # type: ignore
           .write
           .format("delta")
           .mode("overwrite").save(test_trusted_location))

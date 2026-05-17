@@ -1,189 +1,321 @@
-from generic_utils import * # pylint: disable=wrong-import-order,unused-wildcard-import,wildcard-import
-from test_helper import create_test_delta # pylint: disable=wrong-import-order,unused-wildcard-import
+import builtins  # noqa: C0413
+from datetime import datetime
 
-from pyspark.sql.types import * # type: ignore # pylint: disable=wrong-import-order,unused-wildcard-import,wildcard-import
+import pytest  # type: ignore
+from pyspark.sql.types import (IntegerType, LongType, StringType,  # type: ignore
+                               StructField, StructType)
 
-test_curated_location, test_trusted_location = create_test_delta(Notebook())
+from src.generic_utils import DataFrame, LHTSparkDataFrame, Notebook, Table
+from tests.test_helper import create_test_delta
 
-dataframe = LHTSparkDataFrame(name = 'test_delta_listing_curated', layer = "curated")
-dataframe2 = LHTSparkDataFrame(name = 'test_delta_listing_trusted', layer = "trusted")
+spark = getattr(builtins, 'spark', None)  # pylint: disable=invalid-name
 
-assert LHTSparkDataFrame.file_format == 'delta', "Class attribute file format is not set"
-assert dataframe.file_format == 'delta', "File format attribute is not set"
-assert dataframe.name == 'test_delta_listing_curated', 'Name is not set correctly'
-assert dataframe.layer == 'curated', "Layer is not set correctly"
-assert dataframe.load_type == 'full', "Load type is not set correctly"
 
-assert isinstance(dataframe.delta_table, Table), "Delta Table type is not set correctly"
-try:
-    dataframe.delta_table = DeltaTable.forPath(spark, test_curated_location) # type: ignore # pylint: disable=undefined-variable
-    raise AssertionError("Error was not raised")
-except AttributeError:
-    pass
-except Exception as e:
-    raise e
+@pytest.fixture(scope='module')
+def test_delta_locations():
+    return create_test_delta(Notebook())
 
-assert dataframe.latest_version is not None, 'Latest version is not set'
-assert isinstance(dataframe.latest_version, int), 'Latest version type is not correct'
 
-assert dataframe.version is not None, 'Version was set'
-assert dataframe.timestamp is not None, 'timestamp was set'
+@pytest.fixture
+def dataframe(test_delta_locations):  # pylint: disable=unused-argument
+    return LHTSparkDataFrame(name='test_delta_listing_curated', layer='curated')
 
-ERROR_MESSAGE = "Dataframe schema is not correct"
-assert isinstance(dataframe.dataframe, DataFrame), "Dataframe type is not correct"
-assert dataframe.dataframe.schema == StructType([StructField('name', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('age', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('salary', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('department', StringType(), True)]), ERROR_MESSAGE # type: ignore # pylint: disable=undefined-variable
 
-assert dataframe != dataframe2, 'Different dataframes equal'
-assert dataframe == dataframe, 'Equal dataframes differ' # pylint: disable=comparison-with-itself
+@pytest.fixture
+def dataframe2(test_delta_locations):  # pylint: disable=unused-argument
+    return LHTSparkDataFrame(name='test_delta_listing_trusted', layer='trusted')
 
-dataframe4 = LHTSparkDataFrame(name = 'test_delta_listing_curated',
-                               layer = "curated",
-                               version = dataframe.latest_version)
-assert dataframe4.version == dataframe.latest_version, 'Version is not set correctly'
-assert dataframe == dataframe4, 'Dataframes should equal'
 
-try:
-    dataframe3 = LHTSparkDataFrame(name = 'test_delta_listing_trusted',
-                                   layer = "trusted",
-                                   version = 10,
-                                   timestamp = '2024-02-19')
-    raise AssertionError("Error was not raised")
-except ValueError:
-    pass
-except Exception as e:
-    raise e
+class TestLHTSparkDataFrameAttributes:
+    def test_file_format_class_attribute(self):
+        assert LHTSparkDataFrame.file_format == 'delta'
 
-DATETIME = datetime.today().strftime('%Y-%m-%d') # pylint: disable=no-member
-dataframe5 = LHTSparkDataFrame(name = 'test_delta_listing_trusted',
-                               layer = "trusted",
-                               timestamp = DATETIME)
-assert dataframe5.timestamp == DATETIME, 'Timestamp is not set correctly'
+    def test_file_format_instance(self, dataframe):
+        assert dataframe.file_format == 'delta'
 
-dataframe6 = LHTSparkDataFrame(name = 'test_delta_listing_curated',
-                               layer = "curated",
-                               version = dataframe.latest_version - 1)
-assert dataframe6 < dataframe, '< is not defined correctly'
-assert not dataframe < dataframe6, '< is not defined correctly' # pylint: disable=unnecessary-negation
-assert not dataframe < dataframe, '< is not defined correctly' # pylint: disable=comparison-with-itself,unnecessary-negation
+    def test_name(self, dataframe):
+        assert dataframe.name == 'test_delta_listing_curated'
 
-assert dataframe6 <= dataframe, '<= is not defined correctly'
-assert not dataframe <= dataframe6, '<= is not defined correctly' # pylint: disable=unnecessary-negation
-assert dataframe <= dataframe, '<= is not defined correctly' # pylint: disable=comparison-with-itself
+    def test_layer(self, dataframe):
+        assert dataframe.layer == 'curated'
 
-assert not dataframe6 > dataframe, '> is not defined correctly' # pylint: disable=unnecessary-negation
-assert dataframe > dataframe6, '> is not defined correctly'
-assert not dataframe > dataframe, '> is not defined correctly' # pylint: disable=comparison-with-itself,unnecessary-negation
+    def test_load_type_default(self, dataframe):
+        assert dataframe.load_type == 'full'
 
-assert not dataframe6 >= dataframe, '>= is not defined correctly' # pylint: disable=unnecessary-negation
-assert dataframe >= dataframe6, '>= is not defined correctly'
-assert dataframe >= dataframe, '>= is not defined correctly' # pylint: disable=comparison-with-itself
 
-try:
-    dataframe2 < dataframe # pylint: disable=pointless-statement
-    raise AssertionError("Error was not raised")
-except ValueError:
-    pass
-except Exception as e:
-    raise e
+class TestLHTSparkDataFrameDeltaTable:
+    def test_delta_table_is_table(self, dataframe):
+        assert isinstance(dataframe.delta_table, Table)
 
-dataframe7 = dataframe6 + 1
-assert dataframe7 == dataframe
+    def test_delta_table_is_readonly(self, dataframe, test_delta_locations):
+        from src.generic_utils import DeltaTable  # pylint: disable=import-outside-toplevel
+        test_curated_location, _ = test_delta_locations
+        with pytest.raises(AttributeError):
+            dataframe.delta_table = DeltaTable.forPath(spark, test_curated_location)  # type: ignore
 
-dataframe8 = dataframe7 - 1
-assert dataframe8 == dataframe6
 
-ERROR_MESSAGE = "str is not set correctly"
-assert str(dataframe).startswith("tisc data product's test_delta_listing"), ERROR_MESSAGE
-assert repr(dataframe).startswith("LHTSparkDataFrame(name='"), "repr is not set correctly"
+class TestLHTSparkDataFrameVersioning:
+    def test_latest_version_is_set(self, dataframe):
+        assert dataframe.latest_version is not None
 
-# Simulate a merge with 0 effected rows
-dataframe.delta_table.delta_table.alias("src").merge( # pylint: disable=no-member
-    spark.createDataFrame([], dataframe.dataframe.schema).alias("dst"), # type: ignore # pylint: disable=undefined-variable
-    dataframe.construct_merge_condition(dataframe.dataframe.columns)
-).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+    def test_latest_version_is_int(self, dataframe):
+        assert isinstance(dataframe.latest_version, int)
 
-assert dataframe.version == dataframe.get_latest_version() - 1
+    def test_version_default_set(self, dataframe):
+        assert dataframe.version is not None
 
-ERROR_MESSAGE = 'Should be false after a merge condition with 0 affected rows'
-assert not dataframe.is_changed_since_last_version([]), ERROR_MESSAGE
+    def test_timestamp_default_set(self, dataframe):
+        assert dataframe.timestamp is not None
 
-# Simulate a merge with 1 effected row
-dataframe.delta_table.delta_table.alias("src").merge( # pylint: disable=no-member
-    spark.createDataFrame([('Alice', 101, 30000, "HR")], dataframe.dataframe.schema).alias("dst"), # type: ignore # pylint: disable=undefined-variable
-    dataframe.construct_merge_condition(dataframe.dataframe.columns)
-).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+    def test_explicit_version(self, dataframe, test_delta_locations):  # pylint: disable=unused-argument
+        explicit = LHTSparkDataFrame(name='test_delta_listing_curated',
+                                     layer='curated',
+                                     version=dataframe.latest_version)
+        assert explicit.version == dataframe.latest_version
 
-ERROR_MESSAGE = 'Should be false after a merge condition with 1 affected row'
-assert dataframe.is_changed_since_last_version([]), ERROR_MESSAGE
+    def test_explicit_version_equal_to_latest(self, dataframe, test_delta_locations):  # pylint: disable=unused-argument
+        explicit = LHTSparkDataFrame(name='test_delta_listing_curated',
+                                     layer='curated',
+                                     version=dataframe.latest_version)
+        assert dataframe == explicit
 
-try:
-    dataframe.write_to_database(database_name = 'test_database_name',
-                                database_schema = 'test_database_schema',
-                                mode = 'merge')
-    raise AssertionError("Error was not raised")
-except ValueError:
-    pass
-except Exception as e:
-    raise e
+    def test_version_and_timestamp_conflict_raises(self, test_delta_locations):  # pylint: disable=unused-argument
+        with pytest.raises(ValueError):
+            LHTSparkDataFrame(name='test_delta_listing_trusted',
+                              layer='trusted',
+                              version=10,
+                              timestamp='2024-02-19')
 
-dataframe.add_timestamp_column()
-assert dataframe.dataframe.schema == StructType([StructField('name', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('age', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('salary', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('department', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('load_timestamp', StringType(), False)]), ERROR_MESSAGE # type: ignore # pylint: disable=undefined-variable,line-too-long
+    def test_explicit_timestamp(self, test_delta_locations):  # pylint: disable=unused-argument
+        datetime_str = datetime.today().strftime('%Y-%m-%d')
+        dataframe5 = LHTSparkDataFrame(name='test_delta_listing_trusted',
+                                       layer='trusted',
+                                       timestamp=datetime_str)
+        assert dataframe5.timestamp == datetime_str
 
-dataframe.add_hash_column()
-assert dataframe.dataframe.schema == StructType([StructField('name', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('age', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('salary', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('department', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('load_timestamp', StringType(), False), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('dap_hash', StringType(), True)]), ERROR_MESSAGE # type: ignore # pylint: disable=undefined-variable
 
-dataframe.rename_columns_w_pattern(pattern_to_replace='dap', replace_to='lhtdap')
-assert dataframe.dataframe.schema == StructType([StructField('name', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('age', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('salary', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('department', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('load_timestamp', StringType(), False), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('lhtdap_hash', StringType(), True)]), ERROR_MESSAGE # type: ignore # pylint: disable=undefined-variable
+class TestLHTSparkDataFrameSchema:
+    def test_dataframe_type(self, dataframe):
+        assert isinstance(dataframe.dataframe, DataFrame)
 
-dataframe.rename_columns_w_mapping({'load_timestamp': 'load_time', 'salary': 'wage'})
-assert dataframe.dataframe.schema == StructType([StructField('name', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('age', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('wage', LongType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('department', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('load_time', StringType(), False), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('lhtdap_hash', StringType(), True)]), ERROR_MESSAGE # type: ignore # pylint: disable=undefined-variable
+    def test_dataframe_schema(self, dataframe):
+        expected = StructType([
+            StructField('name', StringType(), True),
+            StructField('age', LongType(), True),
+            StructField('salary', LongType(), True),
+            StructField('department', StringType(), True),
+        ])
+        assert dataframe.dataframe.schema == expected
 
-dataframe.cast_data_columns({'age': IntegerType(), 'wage': IntegerType()}) # type: ignore # pylint: disable=undefined-variable
-assert dataframe.dataframe.schema == StructType([StructField('name', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('age', IntegerType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('wage', IntegerType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('department', StringType(), True), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('load_time', StringType(), False), # type: ignore # pylint: disable=undefined-variable
-                                     StructField('lhtdap_hash', StringType(), True)]), ERROR_MESSAGE # type: ignore # pylint: disable=undefined-variable
 
-assert dataframe.construct_merge_condition(['name']) == 'src.name <=> dst.name'
-EXPECTED = 'src.name <=> dst.name AND src.department <=> dst.department'
-assert dataframe.construct_merge_condition(['name', 'department']) == EXPECTED
-assert dataframe.construct_merge_condition(['name'],
-                                           are_nulls_matched=False) == 'src.name == dst.name'
-assert dataframe.construct_merge_condition(['name'],
-                                           sink = 'sink',
-                                           are_nulls_matched=False) == 'src.name == sink.name'
-assert dataframe.construct_merge_condition(['name'],
-                                           source = 'source',
-                                           sink = 'sink',
-                                           are_nulls_matched=False) == 'source.name == sink.name'
+class TestLHTSparkDataFrameEquality:
+    def test_different_dataframes_unequal(self, dataframe, dataframe2):
+        assert dataframe != dataframe2
 
-PATH = f'{dataframe.standardized_curated_path}/generic_utils/integration_test'
-dataframe.write_to_excel(target_path = PATH + '/excel_write_test.xlsx')
-assert len([file
-            for file
-            in dataframe.deep_ls(PATH, max_depth=1)
-            if file.name == 'excel_write_test.xlsx']) == 1, 'File was not written'
+    def test_equal_to_itself(self, dataframe):
+        assert dataframe == dataframe  # pylint: disable=comparison-with-itself
+
+
+class TestLHTSparkDataFrameOrdering:
+    @pytest.fixture
+    def older(self, dataframe, test_delta_locations):  # pylint: disable=unused-argument
+        return LHTSparkDataFrame(name='test_delta_listing_curated',
+                                 layer='curated',
+                                 version=dataframe.latest_version - 1)
+
+    def test_lt_true(self, older, dataframe):
+        assert older < dataframe
+
+    def test_lt_false_other_direction(self, older, dataframe):
+        assert not dataframe < older  # pylint: disable=unnecessary-negation
+
+    def test_lt_false_self(self, dataframe):
+        assert not dataframe < dataframe  # pylint: disable=comparison-with-itself,unnecessary-negation
+
+    def test_le_true(self, older, dataframe):
+        assert older <= dataframe
+
+    def test_le_false_other_direction(self, older, dataframe):
+        assert not dataframe <= older  # pylint: disable=unnecessary-negation
+
+    def test_le_self(self, dataframe):
+        assert dataframe <= dataframe  # pylint: disable=comparison-with-itself
+
+    def test_gt_false(self, older, dataframe):
+        assert not older > dataframe  # pylint: disable=unnecessary-negation
+
+    def test_gt_true(self, older, dataframe):
+        assert dataframe > older
+
+    def test_gt_false_self(self, dataframe):
+        assert not dataframe > dataframe  # pylint: disable=comparison-with-itself,unnecessary-negation
+
+    def test_ge_false(self, older, dataframe):
+        assert not older >= dataframe  # pylint: disable=unnecessary-negation
+
+    def test_ge_true(self, older, dataframe):
+        assert dataframe >= older
+
+    def test_ge_self(self, dataframe):
+        assert dataframe >= dataframe  # pylint: disable=comparison-with-itself
+
+    def test_compare_across_layers_raises(self, dataframe, dataframe2):
+        with pytest.raises(ValueError):
+            dataframe2 < dataframe  # pylint: disable=pointless-statement
+
+    def test_add_version_offset(self, older, dataframe):
+        assert older + 1 == dataframe
+
+    def test_sub_version_offset(self, older, dataframe):
+        assert dataframe - 1 == older
+
+
+class TestLHTSparkDataFrameRepr:
+    def test_str(self, dataframe):
+        assert str(dataframe).startswith("tisc data product's test_delta_listing")
+
+    def test_repr(self, dataframe):
+        assert repr(dataframe).startswith("LHTSparkDataFrame(name='")
+
+
+class TestLHTSparkDataFrameMergeChangeDetection:
+    def test_version_incremented_after_empty_merge(self, dataframe):
+        before = dataframe.version
+        dataframe.delta_table.delta_table.alias("src").merge(  # pylint: disable=no-member
+            spark.createDataFrame([], dataframe.dataframe.schema).alias("dst"),  # type: ignore
+            dataframe.construct_merge_condition(dataframe.dataframe.columns),
+        ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+        assert before == dataframe.get_latest_version() - 1
+
+    def test_is_changed_false_after_empty_merge(self, dataframe):
+        dataframe.delta_table.delta_table.alias("src").merge(  # pylint: disable=no-member
+            spark.createDataFrame([], dataframe.dataframe.schema).alias("dst"),  # type: ignore
+            dataframe.construct_merge_condition(dataframe.dataframe.columns),
+        ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+        assert not dataframe.is_changed_since_last_version([])
+
+    def test_is_changed_true_after_non_empty_merge(self, dataframe):
+        dataframe.delta_table.delta_table.alias("src").merge(  # pylint: disable=no-member
+            spark.createDataFrame(  # type: ignore
+                [('Alice', 101, 30000, "HR")], dataframe.dataframe.schema
+            ).alias("dst"),
+            dataframe.construct_merge_condition(dataframe.dataframe.columns),
+        ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+        assert dataframe.is_changed_since_last_version([])
+
+
+class TestLHTSparkDataFrameWriteToDatabase:
+    def test_merge_mode_raises(self, dataframe):
+        with pytest.raises(ValueError):
+            dataframe.write_to_database(database_name='test_database_name',
+                                        database_schema='test_database_schema',
+                                        mode='merge')
+
+
+class TestLHTSparkDataFrameColumnTransforms:
+    def test_add_timestamp_column(self, dataframe):
+        dataframe.add_timestamp_column()
+        expected = StructType([
+            StructField('name', StringType(), True),
+            StructField('age', LongType(), True),
+            StructField('salary', LongType(), True),
+            StructField('department', StringType(), True),
+            StructField('load_timestamp', StringType(), False),
+        ])
+        assert dataframe.dataframe.schema == expected
+
+    def test_add_hash_column(self, dataframe):
+        dataframe.add_timestamp_column()
+        dataframe.add_hash_column()
+        expected = StructType([
+            StructField('name', StringType(), True),
+            StructField('age', LongType(), True),
+            StructField('salary', LongType(), True),
+            StructField('department', StringType(), True),
+            StructField('load_timestamp', StringType(), False),
+            StructField('dap_hash', StringType(), True),
+        ])
+        assert dataframe.dataframe.schema == expected
+
+    def test_rename_columns_with_pattern(self, dataframe):
+        dataframe.add_timestamp_column()
+        dataframe.add_hash_column()
+        dataframe.rename_columns_w_pattern(pattern_to_replace='dap', replace_to='lhtdap')
+        expected = StructType([
+            StructField('name', StringType(), True),
+            StructField('age', LongType(), True),
+            StructField('salary', LongType(), True),
+            StructField('department', StringType(), True),
+            StructField('load_timestamp', StringType(), False),
+            StructField('lhtdap_hash', StringType(), True),
+        ])
+        assert dataframe.dataframe.schema == expected
+
+    def test_rename_columns_with_mapping(self, dataframe):
+        dataframe.add_timestamp_column()
+        dataframe.add_hash_column()
+        dataframe.rename_columns_w_pattern(pattern_to_replace='dap', replace_to='lhtdap')
+        dataframe.rename_columns_w_mapping({'load_timestamp': 'load_time', 'salary': 'wage'})
+        expected = StructType([
+            StructField('name', StringType(), True),
+            StructField('age', LongType(), True),
+            StructField('wage', LongType(), True),
+            StructField('department', StringType(), True),
+            StructField('load_time', StringType(), False),
+            StructField('lhtdap_hash', StringType(), True),
+        ])
+        assert dataframe.dataframe.schema == expected
+
+    def test_cast_data_columns(self, dataframe):
+        dataframe.add_timestamp_column()
+        dataframe.add_hash_column()
+        dataframe.rename_columns_w_pattern(pattern_to_replace='dap', replace_to='lhtdap')
+        dataframe.rename_columns_w_mapping({'load_timestamp': 'load_time', 'salary': 'wage'})
+        dataframe.cast_data_columns({'age': IntegerType(), 'wage': IntegerType()})
+        expected = StructType([
+            StructField('name', StringType(), True),
+            StructField('age', IntegerType(), True),
+            StructField('wage', IntegerType(), True),
+            StructField('department', StringType(), True),
+            StructField('load_time', StringType(), False),
+            StructField('lhtdap_hash', StringType(), True),
+        ])
+        assert dataframe.dataframe.schema == expected
+
+
+class TestLHTSparkDataFrameMergeCondition:
+    def test_single_column(self, dataframe):
+        assert dataframe.construct_merge_condition(['name']) == 'src.name <=> dst.name'
+
+    def test_multiple_columns(self, dataframe):
+        expected = 'src.name <=> dst.name AND src.department <=> dst.department'
+        assert dataframe.construct_merge_condition(['name', 'department']) == expected
+
+    def test_nulls_not_matched(self, dataframe):
+        actual = dataframe.construct_merge_condition(['name'], are_nulls_matched=False)
+        assert actual == 'src.name == dst.name'
+
+    def test_custom_sink(self, dataframe):
+        actual = dataframe.construct_merge_condition(['name'],
+                                                     sink='sink',
+                                                     are_nulls_matched=False)
+        assert actual == 'src.name == sink.name'
+
+    def test_custom_source_and_sink(self, dataframe):
+        actual = dataframe.construct_merge_condition(['name'],
+                                                     source='source',
+                                                     sink='sink',
+                                                     are_nulls_matched=False)
+        assert actual == 'source.name == sink.name'
+
+
+class TestLHTSparkDataFrameExcelWrite:
+    def test_write_to_excel_creates_file(self, dataframe):
+        path = f'{dataframe.standardized_curated_path}/generic_utils/integration_test'
+        target = path + '/excel_write_test.xlsx'
+        dataframe.write_to_excel(target_path=target)
+        matches = [file
+                   for file
+                   in dataframe.deep_ls(path, max_depth=1)
+                   if file.name == 'excel_write_test.xlsx']
+        assert len(matches) == 1

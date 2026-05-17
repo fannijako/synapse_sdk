@@ -1,24 +1,47 @@
-from generic_utils import DataProduct, Notebook
-from test_helper import create_test_delta
+import pytest  # type: ignore
+
+from src.generic_utils import DataProduct, Notebook
+from tests.test_helper import create_test_delta
 
 
-test_curated_location, test_trusted_location = create_test_delta(Notebook())
+@pytest.fixture(scope='module')
+def test_delta_locations():
+    return create_test_delta(Notebook())
 
-dataproduct = DataProduct()
 
-url = dataproduct.curated_tables.get('test_delta_listing_curated').get('url')
-assert url == test_curated_location, "Test delta not found"
+@pytest.fixture
+def dataproduct():
+    return DataProduct()
 
-url = dataproduct.trusted_tables.get('test_delta_listing_trusted').get('url')
-assert url == test_trusted_location, "Test delta not found"
 
-assert 'test_delta_listing_curated' in dataproduct, "Contains not defined properly"
-assert 'test_delta_listing_trusted' in dataproduct, "Contains not defined properly"
-assert repr(dataproduct) == 'DataProduct()', 'Repr not defined properly'
-assert str(dataproduct) == 'tisc data product version 001', 'str not defined properly'
+class TestDataProduct:
+    def test_curated_table_url(self, dataproduct, test_delta_locations):
+        test_curated_location, _ = test_delta_locations
+        url = dataproduct.curated_tables.get('test_delta_listing_curated').get('url')
+        assert url == test_curated_location
 
-other_data_product = DataProduct()
-other_data_product.data_product_name = 'coca'
+    def test_trusted_table_url(self, dataproduct, test_delta_locations):
+        _, test_trusted_location = test_delta_locations
+        url = dataproduct.trusted_tables.get('test_delta_listing_trusted').get('url')
+        assert url == test_trusted_location
 
-assert dataproduct.data_product_name == 'tisc', "Data product name changed unintentionally"
-assert other_data_product != dataproduct, 'Other data product does not differ from data product'
+    def test_contains_curated_table(self, dataproduct, test_delta_locations):  # pylint: disable=unused-argument
+        assert 'test_delta_listing_curated' in dataproduct
+
+    def test_contains_trusted_table(self, dataproduct, test_delta_locations):  # pylint: disable=unused-argument
+        assert 'test_delta_listing_trusted' in dataproduct
+
+    def test_repr(self, dataproduct):
+        assert repr(dataproduct) == 'DataProduct()'
+
+    def test_str(self, dataproduct):
+        assert str(dataproduct) == 'tisc data product version 001'
+
+    def test_data_product_name_default(self, dataproduct):
+        assert dataproduct.data_product_name == 'tisc'
+
+    def test_mutation_does_not_affect_other_instance(self, dataproduct):
+        other_data_product = DataProduct()
+        other_data_product.data_product_name = 'coca'
+        assert dataproduct.data_product_name == 'tisc'
+        assert other_data_product != dataproduct

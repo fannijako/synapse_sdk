@@ -1,113 +1,125 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Build, test, generate notebook ARM templates, and push them to a data
+# product's Azure DevOps repository.
+#
+# Run with:   bash commit.sh
+# (Do NOT `source` this — failures inside it would exit your shell.)
 
-set -e
+set -euo pipefail
 
-# Variables that needs to be customized for the use case
+# ---- Customize for your use case --------------------------------------------
 REPOSITORY_URL="https://lufthansa-technik@dev.azure.com/lufthansa-technik/LHT-DAP-TISC/_git/lhtdap-tisc-syn"
 BRANCH_NAME="fj/ahornboden/modularized_generic"
-COMMIT_MESSAGE="automatically commited by commit.sh"
+COMMIT_MESSAGE="automatically committed by commit.sh"
 
-FILES=("generic_utils.py" "vacuum_notebook.py" "test_helper.py" "test_asql_database.py" "test_azureml.py" "test_data_product.py" "test_keyvault.py" "test_kusto.py" "test_synstorage.py" "test_utils.py" "test_notebook.py" "test_dataframe.py" "test_table.py" "test_generic_notebook.py")
+# Python files to convert to Synapse notebook templates (paths from repo root).
+FILES=(
+    "src/generic_utils.py"
+    "src/vacuum_notebook.py"
+    "tests/test_helper.py"
+    "tests/test_asql_database.py"
+    "tests/test_azureml.py"
+    "tests/test_data_product.py"
+    "tests/test_keyvault.py"
+    "tests/test_kusto.py"
+    "tests/test_synstorage.py"
+    "tests/test_utils.py"
+    "tests/test_notebook.py"
+    "tests/test_dataframe.py"
+    "tests/test_table.py"
+    "tests/test_generic_notebook.py"
+)
 
-# Additional variables
-PYTHON_VERSION="python3"
-NOTEBOOK_GENERATION_SCRIPT="generate_notebook.py"
+# ---- Constants --------------------------------------------------------------
+PYTHON="${PYTHON:-python3}"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NOTEBOOK_DIR="${REPO_ROOT}/notebook"
+GENERATE_SCRIPT="${REPO_ROOT}/src/generate_notebook.py"
+REPOSITORY_NAME="$(basename "$REPOSITORY_URL")"
 
-# Generated variables
-REPOSITORY_NAME=$(basename "$REPOSITORY_URL")
-JSON_FILES=("${FILES[@]/.py/.json}")
-
-echo "Virtual environment creation and activation started..."
-
-$PYTHON_VERSION -m venv ".venv"
+# ---- Build, test, lint ------------------------------------------------------
+echo ">> Creating virtual environment..."
+"$PYTHON" -m venv .venv
+# shellcheck disable=SC1091
 source .venv/bin/activate
 
-echo "Virtual environment created and activated. Starting the package installations..."
+echo ">> Installing dependencies (make build-all)..."
+make build-all
 
-pip install --upgrade pip
-pip install -r requirements.txt
+echo ">> Running tests (make test)..."
+make test
 
-echo "Requirements installed for the tests. Starting the pytests..."
-
-pytest test_descriptor.py || exit 1
-pytest test_utils_local.py || exit 1
-
-echo "All tests passed. Linter started ..."
-
-pylint_output=$(pylint --disable=W1203,C0114,C0116,W0201,W0621,W0511,R0801 $(git ls-files '*.py'))
-pylint_exit_code=$?
-
-echo "$pylint_output"
-
-if [ $pylint_exit_code -le 9 ]; then
-    echo "Linter passed with score ${pylint_exit_code}/10"
-else
-    echo "Linter failed with score ${pylint_exit_code}/10"
-    exit 1
-fi
-
-echo "Linter passed. Deactivating virtual environment..."
+echo ">> Running linter (make lint)..."
+make lint
 
 deactivate
 
-echo "Virtual environment deactivated. Commiting to the repository..."
-
-git add .
-git commit -m $COMMIT_MESSAGE
-git push
-
-echo "Git commit is finished for the py files. Starting the .py to .json conversions..."
-
-for file in "${FILES[@]}"; do
-    $PYTHON_VERSION $NOTEBOOK_GENERATION_SCRIPT "$file"
-done
-
-echo "Finished the .py to .json conversions. Cloning the data product's repository..."
-
-if [ ! -d "$REPOSITORY_NAME" ]; then
-    git clone $REPOSITORY_URL
-    echo "Data product's repository cloned."
-fi
-    echo "Data product's repository has already been cloned."
-
-cd $REPOSITORY_NAME
-
-if git show-ref --verify --quiet refs/heads/$BRANCH_NAME; then
-    git checkout $BRANCH_NAME
-    echo "Local and remote branch already exists. Checked out to the local."
+# ---- Commit source changes to this repo, if any -----------------------------
+echo ">> Staging source changes..."
+git add src tests
+if git diff --cached --quiet; then
+    echo "   No source changes to commit."
 else
-    if git ls-remote --exit-code --heads origin $BRANCH_NAME > /dev/null 2>&1; then
-        git checkout -b $BRANCH_NAME origin/$BRANCH_NAME
-        echo "Remote branch has already existed. Local pair has been created."
-    else
-        git checkout -b $BRANCH_NAME
-        git push --set-upstream origin $BRANCH_NAME
-        echo "New local branch has been created and remote branch has been paired."
-    fi
+    git commit -m "$COMMIT_MESSAGE"
+    git push
 fi
 
-cd ..
-
-for file in "${JSON_FILES[@]}"; do
-    cp -f notebook/"$file" $REPOSITORY_NAME/notebook/"$file"
+# ---- Generate notebook ARM templates ----------------------------------------
+echo ">> Generating notebook ARM templates..."
+mkdir -p "$NOTEBOOK_DIR"
+for file in "${FILES[@]}"; do
+    src_dir="$(dirname "$file")"
+    base="$(basename "$file")"
+    # generate_notebook.py reads input relative to cwd; run from the source
+    # directory so it picks up the right file and writes a flat output name.
+    ( cd "${REPO_ROOT}/${src_dir}" && "$PYTHON" "$GENERATE_SCRIPT" "$base" "$NOTEBOOK_DIR" )
 done
 
-echo "Generated notebook files have been added to the repository. Starting the commit..."
+# ---- Clone (or reuse) the target repository ---------------------------------
+if [ ! -d "$REPOSITORY_NAME" ]; then
+    echo ">> Cloning target repository..."
+    git clone "$REPOSITORY_URL"
+else
+    echo ">> Target repository already present, reusing local clone."
+fi
 
-cd $REPOSITORY_NAME
-git add .
-git commit -m $COMMIT_MESSAGE
-git push
+# ---- Check out the target branch --------------------------------------------
+(
+    cd "$REPOSITORY_NAME"
+    if git show-ref --verify --quiet "refs/heads/${BRANCH_NAME}"; then
+        git checkout "$BRANCH_NAME"
+    elif git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
+        git checkout -b "$BRANCH_NAME" "origin/${BRANCH_NAME}"
+    else
+        git checkout -b "$BRANCH_NAME"
+        git push --set-upstream origin "$BRANCH_NAME"
+    fi
+)
 
-echo "Commit and push finished. Clean-up started."
+# ---- Copy generated templates into the target repo --------------------------
+mkdir -p "${REPOSITORY_NAME}/notebook"
+for file in "${FILES[@]}"; do
+    json="$(basename "${file%.py}.json")"
+    cp -f "${NOTEBOOK_DIR}/${json}" "${REPOSITORY_NAME}/notebook/${json}"
+done
 
-cd ..
-rm -rf $REPOSITORY_NAME
-rm -rf __pycache__
-rm -rf .pytest_cache
-rm -rf .venv
-rm -rf notebook
+# ---- Commit + push to target repo -------------------------------------------
+(
+    cd "$REPOSITORY_NAME"
+    git add notebook
+    if git diff --cached --quiet; then
+        echo ">> No notebook changes to push."
+    else
+        git commit -m "$COMMIT_MESSAGE"
+        git push
+        echo ">> Pushed notebook updates to ${BRANCH_NAME}."
+    fi
+)
 
-clear
+# ---- Clean up ---------------------------------------------------------------
+echo ">> Cleaning up..."
+rm -rf "$REPOSITORY_NAME" .venv .pytest_cache "$NOTEBOOK_DIR"
+find . -type d -name __pycache__ -prune -exec rm -rf {} +
 
-echo "Successfully finished."
+echo ">> Done."

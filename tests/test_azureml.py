@@ -1,21 +1,37 @@
-from generic_utils import AzureMachineLearningWorkspace
+import pytest  # type: ignore
+
+from src.generic_utils import AzureMachineLearningWorkspace
 
 
-azureml = AzureMachineLearningWorkspace()
+@pytest.fixture
+def azureml():
+    return AzureMachineLearningWorkspace()
 
-ERROR_MESSAGE = 'AzureMachineLearningWorkspace does not have the attributes of Notebook'
-assert azureml.workspace_name == 'syn-tisc-d-001', ERROR_MESSAGE
 
-ERROR_MESSAGE = 'Linked service name is not set correctly'
-assert azureml.linked_service_name == 'mlwtisc001', ERROR_MESSAGE
+@pytest.fixture
+def azureml2():
+    return AzureMachineLearningWorkspace()
 
-azureml2 = AzureMachineLearningWorkspace()
-assert azureml == azureml2, 'AzureMachineLearningWorkspaces should equal'
 
-azureml2.linked_service_name = 'test_change'
-assert azureml != azureml2, 'AzureMachineLearningWorkspaces should not equal'
-assert str(azureml) == 'Azure Machine Learning linked service mlwtisc001'
-assert repr(azureml) == 'AzureMachineLearningWorkspace()'
+class TestAzureML:
+    def test_workspace_name(self, azureml):
+        assert azureml.workspace_name == 'syn-tisc-d-001'
 
-ERROR_MESSAGE = 'get_connection_string_or_creds not defined correctly'
-assert isinstance(azureml.get_connection_string_or_creds(), str), ERROR_MESSAGE
+    def test_linked_service_name(self, azureml):
+        assert azureml.linked_service_name == 'mlwtisc001'
+
+    def test_equal_instances(self, azureml, azureml2):
+        assert azureml == azureml2
+
+    def test_unequal_after_mutation(self, azureml, azureml2):
+        azureml2.linked_service_name = 'test_change'
+        assert azureml != azureml2
+
+    def test_str(self, azureml):
+        assert str(azureml) == 'Azure Machine Learning linked service mlwtisc001'
+
+    def test_repr(self, azureml):
+        assert repr(azureml) == 'AzureMachineLearningWorkspace()'
+
+    def test_get_connection_string_or_creds_returns_str(self, azureml):
+        assert isinstance(azureml.get_connection_string_or_creds(), str)
