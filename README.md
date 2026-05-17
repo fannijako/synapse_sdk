@@ -1,4 +1,4 @@
-# synapse_sdk
+# Synapse SDK
 
 Utilities to develop Azure Synapse Analytics notebooks the way you write regular Python: in your editor, with tests, in version control — and then ship them into a Synapse workspace via Azure DevOps.
 
