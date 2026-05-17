@@ -4,26 +4,27 @@ import os
 
 
 notebook_outline_dict = {
-	"name": "",
-	"properties": {
-		"nbformat": 4,
-		"nbformat_minor": 2,
-		"metadata": {
-			"saveOutput": True,
-			"enableDebugMode": True,
-			"kernelspec": {
-				"name": "synapse_pyspark",
-				"display_name": "Synapse PySpark"
-			},
-			"language_info": {
-				"name": "python"
-			},
-			"sessionKeepAliveTimeout": 30
-		},
-		"cells": [
-		]
-	}
+    "name": "",
+    "properties": {
+        "nbformat": 4,
+        "nbformat_minor": 2,
+        "metadata": {
+            "saveOutput": True,
+            "enableDebugMode": True,
+            "kernelspec": {
+                "name": "synapse_pyspark",
+                "display_name": "Synapse PySpark"
+            },
+            "language_info": {
+                "name": "python"
+            },
+            "sessionKeepAliveTimeout": 120
+        },
+        "cells": [
+        ]
+    }
 }
+
 
 def read_py_file(py_file_name: str = "generic_utils.py"):
     code = []
@@ -72,15 +73,15 @@ def add_code_to_notebook_outline(notebook_outline: dict, code: list):
 
         if code_block[0] in ["\n", ""]:
             code_block = code_block[1:]
-        if code_block[-1] in  ["\n", ""]:
+        if code_block[-1] in ["\n", ""]:
             code_block = code_block[:-1]
 
         notebook_outline["properties"]["cells"].append(
-        {
-				"cell_type": "code",
-				"source": code_block,
-				"execution_count": None
-			}
+            {
+                "cell_type": "code",
+                "source": code_block,
+                "execution_count": None
+            }
         )
 
     return notebook_outline
@@ -94,11 +95,11 @@ def create_notebook_json(notebook_content: dict,
     os.makedirs(folder, exist_ok=True)
 
     with open(os.path.join(folder, f"{notebook_name}.json"), "w", encoding='utf-8') as notebook:
-        json.dump(notebook_content, notebook, indent = 4)
+        json.dump(notebook_content, notebook, indent=4)
 
 
 def main(py_file_name: str = "generic_utils.py", folder: str = "notebook"):
-    code = read_py_file(py_file_name = py_file_name)
+    code = read_py_file(py_file_name=py_file_name)
     notebook_content = add_code_to_notebook_outline(notebook_outline_dict, code)
     notebook_name = py_file_name.replace('.py', '')
     create_notebook_json(notebook_content, folder, notebook_name)
@@ -107,15 +108,15 @@ def main(py_file_name: str = "generic_utils.py", folder: str = "notebook"):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert Python file to notebook format')
     parser.add_argument('py_file_name',
-                        type = str,
-                        nargs = '?',
-                        default = 'generic_utils.py',
-                        help = 'Python file name to convert (e.g. generic_utils.py)')
+                        type=str,
+                        nargs='?',
+                        default='generic_utils.py',
+                        help='Python file name to convert (e.g. generic_utils.py)')
     parser.add_argument('folder',
-                        type = str,
-                        nargs = '?',
+                        type=str,
+                        nargs='?',
                         default='notebook',
-                        help = 'Subfolder to place the result to (recommended: notebook)')
+                        help='Subfolder to place the result to (recommended: notebook)')
 
     args = parser.parse_args()
-    main(py_file_name = args.py_file_name, folder = args.folder)
+    main(py_file_name=args.py_file_name, folder=args.folder)
